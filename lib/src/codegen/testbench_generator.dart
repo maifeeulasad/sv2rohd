@@ -180,6 +180,9 @@ class TestbenchDeclaration extends IrNode {
 
   @override
   String get nodeType => 'TestbenchDeclaration';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
 }
 
 /// Test definition.
@@ -211,6 +214,9 @@ class TestDefinition extends IrNode {
 
   @override
   String get nodeType => 'TestDefinition';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
 }
 
 /// Clock generation.
@@ -227,6 +233,9 @@ class ClockGeneration extends IrNode {
 
   @override
   String get nodeType => 'ClockGeneration';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
 }
 
 /// Reset sequence.
@@ -245,6 +254,9 @@ class ResetSequence extends IrNode {
 
   @override
   String get nodeType => 'ResetSequence';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
 }
 
 /// Stimulus definition.
@@ -267,6 +279,9 @@ class StimulusDefinition extends IrNode {
 
   @override
   String get nodeType => 'StimulusDefinition';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
 }
 
 /// Stimulus kind.
