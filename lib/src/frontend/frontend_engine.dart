@@ -87,10 +87,3 @@ class ParsedModule {
   /// Returns true if parsing was successful (no errors).
   bool get isSuccess => true; // Would check for parser errors
 }
-
-/// Represents an include path.
-class IncludePath {
-  final String path;
-
-  const IncludePath(this.path);
-}
