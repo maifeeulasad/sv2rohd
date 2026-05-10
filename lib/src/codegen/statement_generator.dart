@@ -182,14 +182,12 @@ class StatementGenerator {
       initialValue = exprGen.generate(initAssign.value);
     }
 
-    final condition = stmt.condition != null
-        ? exprGen.generate(stmt.condition!)
-        : 'true';
-    final step = stmt.step != null
-        ? _extractStep(stmt.step!)
-        : '$varName + 1';
+    final condition =
+        stmt.condition != null ? exprGen.generate(stmt.condition!) : 'true';
+    final step = stmt.step != null ? _extractStep(stmt.step!) : '$varName + 1';
 
-    _writeLine(buffer, 'for (var $varName = $initialValue; $condition; $step) {');
+    _writeLine(
+        buffer, 'for (var $varName = $initialValue; $condition; $step) {');
     _indent();
     generate(buffer, stmt.body);
     _dedent();
@@ -207,9 +205,8 @@ class StatementGenerator {
   }
 
   void _generateWhileLoop(StringBuffer buffer, WhileLoopStatement stmt) {
-    final condition = stmt.condition != null
-        ? exprGen.generate(stmt.condition!)
-        : 'true';
+    final condition =
+        stmt.condition != null ? exprGen.generate(stmt.condition!) : 'true';
 
     _writeLine(buffer, 'while ($condition) {');
     _indent();
@@ -266,7 +263,8 @@ class StatementGenerator {
     final typeName = stmt.varType ?? 'Logic';
 
     if (width == 1) {
-      _writeLine(buffer, 'final $varName = $typeName(name: \'${stmt.variableName}\');');
+      _writeLine(buffer,
+          'final $varName = $typeName(name: \'${stmt.variableName}\');');
     } else {
       _writeLine(
         buffer,
