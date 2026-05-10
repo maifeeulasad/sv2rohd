@@ -12,7 +12,9 @@ class NamingStrategy {
     final parts = name.split('_');
     return parts
         .map(
-          (p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
+          (p) => p.isEmpty
+              ? ''
+              : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
         )
         .join();
   }
