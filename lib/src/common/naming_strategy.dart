@@ -172,7 +172,6 @@ class NamingStrategy {
     'process',
     'ref',
     'automatic',
-    'static',
     'program',
     'endprogram',
     'checker',
