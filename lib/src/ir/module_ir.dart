@@ -1,7 +1,9 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
+import '../analysis/symbol.dart';
 import 'ir_node.dart';
+import 'ir_visitor.dart';
 
 /// Represents a module declaration in the IR.
 class ModuleDeclaration extends IrNode {
