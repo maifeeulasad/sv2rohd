@@ -119,7 +119,6 @@ run-config: ## Run with configuration file
 clean: ## Clean build and temporary files
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(OUTPUT_DIR) $(COVERAGE_DIR)
-	@$(DART) pub cache clean 2>/dev/null || true
 	@echo "✓ Clean complete"
 
 clean-deps: ## Remove pubspec.lock and reinstall
