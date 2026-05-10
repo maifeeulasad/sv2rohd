@@ -205,7 +205,8 @@ class IrPrinter extends DefaultIrVisitor<String> {
 
   @override
   String visitModuleInstantiation(ModuleInstantiation node) {
-    _writeLine('${_indentStr()}instantiate ${node.moduleName} as ${node.instanceName}');
+    _writeLine(
+        '${_indentStr()}instantiate ${node.moduleName} as ${node.instanceName}');
     _indent();
     for (final conn in node.portConnections) {
       _writeLine('${_indentStr()}port ${conn.portName}');
