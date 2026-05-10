@@ -7,7 +7,7 @@ import 'package:sv2rohd/src/common/common.dart';
 void main() {
   group('SourceLocation', () {
     test('creates with correct values', () {
-      final location = SourceLocation('test.sv', 10, 5, 100);
+      final location = SourceLocation(sourceName: 'test.sv', line: 10, column: 5, offset: 100);
       expect(location.sourceName, 'test.sv');
       expect(location.line, 10);
       expect(location.column, 5);
@@ -33,9 +33,9 @@ void main() {
       final start = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 10);
       final end = SourceLocation(sourceName: 'test.sv', line: 1, column: 10, offset: 50);
       final range = SourceRange(start: start, end: end);
-      expect(range.contains(30), true);
-      expect(range.contains(5), false);
-      expect(range.contains(60), false);
+      expect(range.containsOffset(30), true);
+      expect(range.containsOffset(5), false);
+      expect(range.containsOffset(60), false);
     });
 
     test('overlaps checks if ranges intersect', () {
