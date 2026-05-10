@@ -37,16 +37,14 @@ class DiagnosticCollector {
   bool get hasWarnings => _diagnostics.any((d) => d.isWarning);
 
   /// Returns all error diagnostics.
-  List<Diagnostic> get errors =>
-      _diagnostics.where((d) => d.isError).toList();
+  List<Diagnostic> get errors => _diagnostics.where((d) => d.isError).toList();
 
   /// Returns all warning diagnostics.
   List<Diagnostic> get warnings =>
       _diagnostics.where((d) => d.isWarning).toList();
 
   /// Returns all info diagnostics.
-  List<Diagnostic> get infos =>
-      _diagnostics.where((d) => d.isInfo).toList();
+  List<Diagnostic> get infos => _diagnostics.where((d) => d.isInfo).toList();
 
   /// Clears all diagnostics.
   void clear() {
@@ -80,8 +78,7 @@ class DiagnosticSummary {
   bool get hasErrors => errors > 0;
 
   @override
-  String toString() =>
-      '$errors error${errors == 1 ? '' : 's'}, '
+  String toString() => '$errors error${errors == 1 ? '' : 's'}, '
       '$warnings warning${warnings == 1 ? '' : 's'}, '
       '$infos info message${infos == 1 ? '' : 's'}';
 }
