@@ -15,7 +15,8 @@ class SignalGenerator {
     final width = _getWidth(signal.width);
 
     // In ROHD, internal signals are declared as Logic
-    buffer.write('final $name = Logic(name: \'${signal.name}\', width: $width)');
+    buffer
+        .write('final $name = Logic(name: \'${signal.name}\', width: $width)');
 
     if (signal.initialValue != null) {
       buffer.write('; // TODO: Initial value');
@@ -41,7 +42,9 @@ class NamingStrategy {
   String toClassName(String name) {
     final parts = name.split('_');
     return parts
-        .map((p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
+        .map((p) => p.isEmpty
+            ? ''
+            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
         .join();
   }
 
