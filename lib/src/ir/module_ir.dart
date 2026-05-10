@@ -284,7 +284,8 @@ class ForGenerateBlock extends IrNode {
   });
 
   @override
-  List<IrNode> get children => [initialization, if (condition != null) condition!, step, body];
+  List<IrNode> get children =>
+      [initialization, if (condition != null) condition!, step, body];
 
   @override
   String get nodeType => 'ForGenerateBlock';
@@ -378,7 +379,11 @@ class FunctionDeclaration extends IrNode {
   });
 
   @override
-  List<IrNode> get children => [...?([returnType]), ...ports, ...items];
+  List<IrNode> get children => [
+        ...?([returnType]),
+        ...ports,
+        ...items
+      ];
 
   @override
   String get nodeType => 'FunctionDeclaration';
