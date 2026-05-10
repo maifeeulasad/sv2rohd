@@ -63,11 +63,13 @@ void main() {
         name: 'test_signal',
       );
 
-      scope.define('test_signal', Symbol(
-        name: 'test_signal',
-        kind: SymbolKind.signal,
-        declaration: signal,
-      ));
+      scope.define(
+          'test_signal',
+          Symbol(
+            name: 'test_signal',
+            kind: SymbolKind.signal,
+            declaration: signal,
+          ));
 
       final resolved = scope.resolve('test_signal');
       expect(resolved, isNotNull);
@@ -111,11 +113,13 @@ void main() {
         name: 'my_signal',
       );
 
-      table.define('my_signal', Symbol(
-        name: 'my_signal',
-        kind: SymbolKind.signal,
-        declaration: signal,
-      ));
+      table.define(
+          'my_signal',
+          Symbol(
+            name: 'my_signal',
+            kind: SymbolKind.signal,
+            declaration: signal,
+          ));
 
       final resolved = table.resolve('my_signal');
       expect(resolved, isNotNull);
