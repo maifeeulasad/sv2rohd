@@ -40,16 +40,16 @@ void main() {
 
     test('overlaps checks if ranges intersect', () {
       final range1 = SourceRange(
-        SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0),
-        SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 50),
+        start: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0),
+        end: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 50),
       );
       final range2 = SourceRange(
-        SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 25),
-        SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 75),
+        start: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 25),
+        end: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 75),
       );
       final range3 = SourceRange(
-        SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 60),
-        SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 100),
+        start: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 60),
+        end: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 100),
       );
 
       expect(range1.overlaps(range2), true);
