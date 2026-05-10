@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import 'ir_node.dart';
+import 'ir_visitor.dart';
 
 /// Represents a binary expression.
 class BinaryExpression extends IrExpression {
@@ -37,6 +38,9 @@ enum BinaryOperator {
   or,
   xor,
   xnor,
+  nand,
+  nor,
+  nxor,
   equal,
   notEqual,
   caseEqual,
@@ -94,7 +98,7 @@ class IdentifierExpression extends IrExpression {
   });
 
   @override
-  List<IrNode> get children => indices;
+  List<IrNode> get children => List<IrNode>.from(indices);
 
   @override
   String get nodeType => 'IdentifierExpression';
