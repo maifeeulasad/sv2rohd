@@ -27,7 +27,8 @@ class ExpressionInfo {
         referencedSignals: {name},
       );
 
-  factory ExpressionInfo.constant(dynamic value, TypeInfo type) => ExpressionInfo(
+  factory ExpressionInfo.constant(dynamic value, TypeInfo type) =>
+      ExpressionInfo(
         type: type,
         isConstant: true,
         constValue: value,
@@ -114,7 +115,8 @@ class ExpressionAnalyzer {
 
     dynamic constValue;
     if (isConst) {
-      constValue = _foldBinary(expr.operator, leftInfo.constValue, rightInfo.constValue);
+      constValue =
+          _foldBinary(expr.operator, leftInfo.constValue, rightInfo.constValue);
     }
 
     return ExpressionInfo(
@@ -158,7 +160,8 @@ class ExpressionAnalyzer {
     final falseInfo = analyze(expr.falseExpr);
 
     final resultType = typeAnalyzer.getExpressionType(expr);
-    final isConst = condInfo.isConstant && trueInfo.isConstant && falseInfo.isConstant;
+    final isConst =
+        condInfo.isConstant && trueInfo.isConstant && falseInfo.isConstant;
 
     return ExpressionInfo(
       type: resultType,
@@ -228,12 +231,10 @@ class ExpressionAnalyzer {
 
     return ExpressionInfo(
       type: TypeInfo.logic1(),
-      referencedSignals: expr.arguments
-          .expand((a) => analyze(a).referencedSignals)
-          .toSet(),
-      referencedParameters: expr.arguments
-          .expand((a) => analyze(a).referencedParameters)
-          .toSet(),
+      referencedSignals:
+          expr.arguments.expand((a) => analyze(a).referencedSignals).toSet(),
+      referencedParameters:
+          expr.arguments.expand((a) => analyze(a).referencedParameters).toSet(),
     );
   }
 
