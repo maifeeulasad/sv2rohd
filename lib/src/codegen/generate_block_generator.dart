@@ -4,6 +4,7 @@
 import '../ir/ir.dart';
 import 'expression_generator.dart';
 import 'signal_generator.dart';
+import 'naming_strategy.dart';
 
 /// Generates ROHD code from IR generate blocks.
 ///
