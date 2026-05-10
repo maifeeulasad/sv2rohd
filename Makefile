@@ -63,7 +63,8 @@ test-watch: ## Run tests in watch mode
 test-coverage: ## Run tests with coverage
 	@echo "Running tests with coverage..."
 	@$(DART) pub global activate coverage
-	@$(DART) pub global run coverage:format_coverage --packages=.packages --report-on=lib --in=coverage --out=coverage/coverage.lcov --lcov
+	@$(DART) pub global run coverage:test_with_coverage --out=$(COVERAGE_DIR)
+	@$(DART) pub global run coverage:format_coverage --package=. --report-on=lib --in=$(COVERAGE_DIR) --out=$(COVERAGE_DIR)/coverage.lcov --lcov
 	@echo "✓ Coverage report generated in $(COVERAGE_DIR)/"
 
 test-verbose: ## Run tests with verbose output
