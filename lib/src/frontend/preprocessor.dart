@@ -62,7 +62,8 @@ class Preprocessor {
         sourceMap.addMapping(output.length, lineOffset);
       }
       // Handle else/elsif
-      else if (line.trim().startsWith('`else') || line.trim().startsWith('`elsif')) {
+      else if (line.trim().startsWith('`else') ||
+          line.trim().startsWith('`elsif')) {
         output.write(line);
         output.write('\n');
         sourceMap.addMapping(output.length, lineOffset);
