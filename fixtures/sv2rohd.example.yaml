@@ -1,0 +1,39 @@
+# SV2ROHD Configuration
+# Generated: 2026-05-10
+
+output:
+  output_dir: generated
+  naming: snakeCase
+  include_comments: true
+  format_output: true
+  source_maps: false
+
+parsing:
+  preprocess: true
+  include_paths:
+    - ./include
+    - ./common
+  defines:
+    SYNTHESIS: "1"
+    SIMULATION: "0"
+  strict: false
+  sv2012: true
+  sv2017: false
+  sv2023: false
+
+codegen:
+  target: rohd
+  generate_tests: false
+  generate_docs: false
+  preserve_names: true
+  waveform_support: false
+  optimization_level: 1
+
+analysis:
+  semantic_analysis: true
+  type_checking: true
+  lint_rules:
+    - no_unused_signals
+    - no_width_mismatch
+  warnings_as_errors: false
+  max_errors: 50
