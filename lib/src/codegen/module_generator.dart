@@ -73,13 +73,16 @@ class ModuleGenerator {
 
     switch (port.direction) {
       case PortDirection.input:
-        buffer.writeln("final $portName = addInput('${port.name}', width: $width);");
+        buffer.writeln(
+            "final $portName = addInput('${port.name}', width: $width);");
         break;
       case PortDirection.output:
-        buffer.writeln("final $portName = addOutput('${port.name}', width: $width);");
+        buffer.writeln(
+            "final $portName = addOutput('${port.name}', width: $width);");
         break;
       case PortDirection.inout:
-        buffer.writeln("final $portName = addInOut('${port.name}', width: $width);");
+        buffer.writeln(
+            "final $portName = addInOut('${port.name}', width: $width);");
         break;
     }
   }
@@ -102,7 +105,9 @@ class NamingStrategy {
   String toClassName(String name) {
     final parts = name.split('_');
     return parts
-        .map((p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
+        .map((p) => p.isEmpty
+            ? ''
+            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
         .join();
   }
 
