@@ -61,8 +61,7 @@ class SymbolTable {
     return null;
   }
 
-  Scope? get currentScope =>
-      _scopeStack.isNotEmpty ? _scopeStack.last : null;
+  Scope? get currentScope => _scopeStack.isNotEmpty ? _scopeStack.last : null;
 
   List<Symbol> lookupRecursive(String name) {
     // Look in current scope
