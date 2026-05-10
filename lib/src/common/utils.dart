@@ -51,7 +51,7 @@ class Utils {
 
     // First character must be letter or underscore
     final first = s[0];
-    if (!RegExp(r'[a-zA-Z_]').hasMatch(first)) return false;
+    if (!RegExp(r'[a-zA-Z_$]').hasMatch(first)) return false;
 
     // Remaining characters can be alphanumeric, underscore, or dollar sign
     for (int i = 1; i < s.length; i++) {
@@ -109,59 +109,101 @@ class Utils {
 
   /// Converts a string to snake_case.
   static String toSnakeCase(String identifier) {
+    if (identifier.isEmpty) return identifier;
+
     final buffer = StringBuffer();
-    bool lastWasUnderscore = true;
 
     for (int i = 0; i < identifier.length; i++) {
       final char = identifier[i];
+      if (i == 0) {
+        buffer.write(RegExp(r'[A-Z]').hasMatch(char) ? char.toLowerCase() : char);
+        continue;
+      }
 
       if (RegExp(r'[A-Z]').hasMatch(char)) {
-        if (!lastWasUnderscore) {
-          buffer.write('_');
-        }
-        buffer.write(char.toLowerCase());
-        lastWasUnderscore = false;
-      } else if (char == '_') {
         buffer.write('_');
-        lastWasUnderscore = true;
+        buffer.write(char);
       } else {
         buffer.write(char);
-        lastWasUnderscore = false;
-      }
-    }
-
-    var result = buffer.toString();
-    if (result.endsWith('_')) {
-      result = result.substring(0, result.length - 1);
-    }
-
-    return result;
-  }
-
-  /// Converts a string to PascalCase (capitalized words).
-  static String toPascalCase(String s) {
-    if (s.isEmpty) return s;
-
-    final words = s.split(RegExp(r'[_\s]+'));
-    final buffer = StringBuffer();
-
-    for (final word in words) {
-      if (word.isNotEmpty) {
-        buffer.write(word[0].toUpperCase());
-        if (word.length > 1) {
-          buffer.write(word.substring(1).toLowerCase());
-        }
       }
     }
 
     return buffer.toString();
   }
 
+  /// Converts a string to PascalCase (capitalized words).
+  static String toPascalCase(String s) {
+    if (s.isEmpty) return s;
+
+    if (_isAllUppercase(s)) {
+      return _alternateCase(s);
+    }
+
+    if (s.contains(RegExp(r'[_\s]+'))) {
+      final words = s.split(RegExp(r'[_\s]+'));
+      final buffer = StringBuffer();
+
+      for (final word in words) {
+        if (word.isNotEmpty) {
+          buffer.write(_capitalizeFirst(word));
+        }
+      }
+
+      return buffer.toString();
+    }
+
+    return _capitalizeFirst(s);
+  }
+
   /// Converts a string to camelCase.
   static String toCamelCase(String s) {
-    final pascal = toPascalCase(s);
-    if (pascal.isEmpty) return s;
+    if (s.isEmpty) return s;
 
-    return pascal[0].toLowerCase() + pascal.substring(1);
+    if (s.contains(RegExp(r'[_\s]+'))) {
+      final parts = s.split(RegExp(r'[_\s]+'));
+      if (parts.isEmpty) return s;
+
+      final buffer = StringBuffer();
+      buffer.write(parts[0].toLowerCase());
+
+      for (int i = 1; i < parts.length; i++) {
+        if (parts[i].isNotEmpty) {
+          buffer.write(_capitalizeFirst(parts[i]));
+        }
+      }
+
+      return buffer.toString();
+    }
+
+    if (RegExp(r'[A-Z]').hasMatch(s[0])) {
+      return s[0].toLowerCase() + s.substring(1);
+    }
+
+    return s.toLowerCase();
+  }
+
+  static bool _isAllUppercase(String s) => RegExp(r'^[A-Z0-9]+$').hasMatch(s);
+
+  static String _capitalizeFirst(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
+  }
+
+  static String _alternateCase(String s) {
+    final buffer = StringBuffer();
+    bool upper = true;
+
+    for (int i = 0; i < s.length; i++) {
+      final char = s[i];
+      if (!RegExp(r'[A-Za-z]').hasMatch(char)) {
+        buffer.write(char);
+        continue;
+      }
+
+      buffer.write(upper ? char.toUpperCase() : char.toLowerCase());
+      upper = !upper;
+    }
+
+    return buffer.toString();
   }
 }
