@@ -27,7 +27,6 @@ dev_dependencies:
   build_runner: ^2.4.0
   lints: ^3.0.0
   mockito: ^5.4.0
-  path_provider: ^2.1.0
 
 executables:
   sv2rohd: bin/sv2rohd.dart
