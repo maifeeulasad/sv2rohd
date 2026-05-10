@@ -85,7 +85,8 @@ class TestbenchGenerator {
     if (reset.resetActiveHigh) {
       buffer.writeln('dut.rst.put(1);');
       final duration = exprGen.generate(reset.duration);
-      buffer.writeln('await Future.delayed(Duration(microseconds: $duration));');
+      buffer
+          .writeln('await Future.delayed(Duration(microseconds: $duration));');
       buffer.writeln('dut.rst.put(0);');
     }
   }
@@ -135,7 +136,9 @@ class TestbenchGenerator {
     final parts = name.split('_');
     return parts
         .map(
-          (p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
+          (p) => p.isEmpty
+              ? ''
+              : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
         )
         .join();
   }
