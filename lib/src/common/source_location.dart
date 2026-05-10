@@ -3,6 +3,12 @@
 
 /// Represents a location in source code with file, line, and column information.
 class SourceLocation {
+  static const SourceLocation _dummy = SourceLocation(
+    sourceName: 'unknown',
+    line: 0,
+    column: 0,
+    offset: 0,
+  );
   final String sourceName;
   final int line;
   final int column;
@@ -24,6 +30,9 @@ class SourceLocation {
       offset: 0,
     );
   }
+
+  /// Creates a dummy source location for tests or placeholders.
+  factory SourceLocation.dummy() => _dummy;
 
   /// Creates a source location from offset in source text.
   factory SourceLocation.fromOffset(
