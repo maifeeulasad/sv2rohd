@@ -5,6 +5,7 @@ import '../ir/ir.dart';
 import 'expression_generator.dart';
 import 'signal_generator.dart';
 import 'module_generator.dart';
+import 'naming_strategy.dart';
 
 /// Options for code generation.
 class GeneratorOptions {
@@ -40,8 +41,12 @@ class RohdGenerator {
           namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
         ),
         moduleGen = ModuleGenerator(
-          exprGen: exprGen,
-          signalGen: signalGen,
+          exprGen: ExpressionGenerator(
+            namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
+          ),
+          signalGen: SignalGenerator(
+            namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
+          ),
           namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
         );
 
@@ -388,27 +393,3 @@ class RohdGenerator {
   }
 }
 
-/// Simple naming strategy for code generation.
-class NamingStrategy {
-  const NamingStrategy();
-
-  String toClassName(String name) {
-    // Convert snake_case to PascalCase
-    final parts = name.split('_');
-    return parts
-        .map((p) => p.isEmpty
-            ? ''
-            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
-        .join();
-  }
-
-  String toCamelCase(String name) {
-    final className = toClassName(name);
-    if (className.isEmpty) return className;
-    return '${className[0].toLowerCase()}${className.substring(1)}';
-  }
-
-  String toDart(String name) {
-    return name;
-  }
-}
