@@ -1,4 +1,4 @@
-// Copyright (C) 2026
+// Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
 /// SV2ROHD - SystemVerilog to ROHD converter.
