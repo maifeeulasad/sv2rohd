@@ -4,6 +4,7 @@
 import '../ir/ir.dart';
 import 'expression_generator.dart';
 import 'signal_generator.dart';
+import 'naming_strategy.dart';
 
 /// Generates ROHD module classes from IR module declarations.
 class ModuleGenerator {
@@ -95,25 +96,5 @@ class ModuleGenerator {
       return (msb - lsb).abs() + 1;
     }
     return 1;
-  }
-}
-
-/// Simple naming strategy.
-class NamingStrategy {
-  const NamingStrategy();
-
-  String toClassName(String name) {
-    final parts = name.split('_');
-    return parts
-        .map((p) => p.isEmpty
-            ? ''
-            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
-        .join();
-  }
-
-  String toCamelCase(String name) {
-    final className = toClassName(name);
-    if (className.isEmpty) return className;
-    return '${className[0].toLowerCase()}${className.substring(1)}';
   }
 }
