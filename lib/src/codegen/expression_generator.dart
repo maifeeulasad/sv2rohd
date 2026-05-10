@@ -178,7 +178,9 @@ class NamingStrategy {
   String toClassName(String name) {
     final parts = name.split('_');
     return parts
-        .map((p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
+        .map((p) => p.isEmpty
+            ? ''
+            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
         .join();
   }
 
