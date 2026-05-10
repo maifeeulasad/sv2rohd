@@ -45,7 +45,8 @@ class ParserAdapter {
     final lexer = SystemVerilogLexer(inputStream);
     lexer.addErrorListener(LexerErrorListener(diagnostics));
 
-    final tokenStream = CommonTokenStream(CommonToken.fromTokens(lexer.getAllTokens()));
+    final tokenStream =
+        CommonTokenStream(CommonToken.fromTokens(lexer.getAllTokens()));
     final exprParser = SystemVerilogParser(tokenStream);
 
     return exprParser.expression();
