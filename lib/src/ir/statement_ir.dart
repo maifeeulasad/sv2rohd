@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import 'ir_node.dart';
+import 'ir_visitor.dart';
 
 /// Represents an assignment statement.
 class AssignmentStatement extends IrStatement {
@@ -24,6 +25,109 @@ class AssignmentStatement extends IrStatement {
 
   @override
   T accept<T>(IrVisitor<T> visitor) => visitor.visitAssignment(this);
+}
+
+/// Represents a blocking assignment statement.
+class BlockingAssignmentStatement extends IrStatement {
+  final IrExpression target;
+  final IrExpression value;
+
+  BlockingAssignmentStatement({
+    required super.location,
+    required this.target,
+    required this.value,
+  });
+
+  @override
+  List<IrNode> get children => [target, value];
+
+  @override
+  String get nodeType => 'BlockingAssignmentStatement';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+}
+
+/// Represents a non-blocking assignment statement.
+class NonBlockingAssignmentStatement extends IrStatement {
+  final IrExpression target;
+  final IrExpression value;
+
+  NonBlockingAssignmentStatement({
+    required super.location,
+    required this.target,
+    required this.value,
+  });
+
+  @override
+  List<IrNode> get children => [target, value];
+
+  @override
+  String get nodeType => 'NonBlockingAssignmentStatement';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+}
+
+/// Represents a delay statement (e.g., #10).
+class DelayStatement extends IrStatement {
+  final IrExpression? delay;
+
+  DelayStatement({
+    required super.location,
+    this.delay,
+  });
+
+  @override
+  List<IrNode> get children => delay != null ? [delay!] : [];
+
+  @override
+  String get nodeType => 'DelayStatement';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+}
+
+/// Represents an event control statement (e.g., @(posedge clk)).
+class EventStatement extends IrStatement {
+  final IrExpression? expression;
+
+  EventStatement({
+    required super.location,
+    this.expression,
+  });
+
+  @override
+  List<IrNode> get children => expression != null ? [expression!] : [];
+
+  @override
+  String get nodeType => 'EventStatement';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+}
+
+/// Represents a variable declaration inside a procedural block.
+class VariableDeclarationStatement extends IrStatement {
+  final String variableName;
+  final String? varType;
+  final VectorWidth? width;
+
+  VariableDeclarationStatement({
+    required super.location,
+    required this.variableName,
+    this.varType,
+    this.width,
+  });
+
+  @override
+  List<IrNode> get children => width != null ? [width!] : [];
+
+  @override
+  String get nodeType => 'VariableDeclarationStatement';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
 }
 
 /// Represents an if statement.
@@ -84,7 +188,7 @@ enum CaseKind {
 }
 
 /// Represents a case item.
-class CaseItem extends IrNode {
+class CaseItem extends IrStatement {
   final List<IrExpression> values;
   final IrStatement? statement;
 
@@ -96,7 +200,7 @@ class CaseItem extends IrNode {
 
   @override
   List<IrNode> get children {
-    final children = values.toList();
+    final children = <IrNode>[...values];
     if (statement != null) children.add(statement!);
     return children;
   }
