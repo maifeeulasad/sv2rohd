@@ -15,24 +15,24 @@ void main() {
     });
 
     test('formats correctly', () {
-      final location = SourceLocation('test.sv', 10, 5, 100);
+      final location = SourceLocation(sourceName: 'test.sv', line: 10, column: 5, offset: 100);
       expect(location.formatted, 'test.sv:10:5');
     });
   });
 
   group('SourceRange', () {
     test('creates with start and end locations', () {
-      final start = SourceLocation('test.sv', 1, 1, 0);
-      final end = SourceLocation('test.sv', 2, 1, 50);
-      final range = SourceRange(start, end);
+      final start = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final end = SourceLocation(sourceName: 'test.sv', line: 2, column: 1, offset: 50);
+      final range = SourceRange(start: start, end: end);
       expect(range.start, start);
       expect(range.end, end);
     });
 
     test('contains checks if offset is within range', () {
-      final start = SourceLocation('test.sv', 1, 1, 10);
-      final end = SourceLocation('test.sv', 1, 10, 50);
-      final range = SourceRange(start, end);
+      final start = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 10);
+      final end = SourceLocation(sourceName: 'test.sv', line: 1, column: 10, offset: 50);
+      final range = SourceRange(start: start, end: end);
       expect(range.contains(30), true);
       expect(range.contains(5), false);
       expect(range.contains(60), false);
