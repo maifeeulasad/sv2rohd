@@ -190,12 +190,14 @@ class NamingStrategy {
       result = '_$result';
     }
 
+    result = _sanitizeDartIdentifier(result);
+
     // Handle Dart keywords
     if (dartKeywords.contains(result)) {
       result = '${result}_';
     }
 
-    return _sanitizeDartIdentifier(result);
+    return result;
   }
 
   /// Converts to CamelCase for variable names.
@@ -216,13 +218,7 @@ class NamingStrategy {
 
     // Replace multiple underscores with single
     var result = identifier.replaceAll(RegExp(r'_+'), '_');
-
-    // Remove leading/trailing underscores
-    result = result.replaceAll(RegExp(r'^_+|_+$'), '');
-
-    if (result.isEmpty) return 'unnamed';
-
-    return result;
+    return result.isEmpty ? 'unnamed' : result;
   }
 
   /// Converts snake_case to camelCase.
@@ -233,18 +229,25 @@ class NamingStrategy {
     }
 
     final buffer = StringBuffer();
-    buffer.write(parts[0].toLowerCase());
+    buffer.write(_lowercaseFirst(parts[0]));
 
     for (int i = 1; i < parts.length; i++) {
       if (parts[i].isNotEmpty) {
-        buffer.write(parts[i][0].toUpperCase());
-        if (parts[i].length > 1) {
-          buffer.write(parts[i].substring(1).toLowerCase());
-        }
+        buffer.write(_uppercaseFirst(parts[i]));
       }
     }
 
     return buffer.toString();
+  }
+
+  String _lowercaseFirst(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toLowerCase() + value.substring(1);
+  }
+
+  String _uppercaseFirst(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toUpperCase() + value.substring(1);
   }
 
   /// Converts snake_case to PascalCase.
