@@ -1,4 +1,4 @@
-// Copyright (C) 2026
+// Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // Basic adder module for testing
 
 module adder #(
