@@ -26,7 +26,8 @@ class SourceLocation {
   }
 
   /// Creates a source location from offset in source text.
-  factory SourceLocation.fromOffset(String sourceName, String sourceText, int offset) {
+  factory SourceLocation.fromOffset(
+      String sourceName, String sourceText, int offset) {
     if (offset < 0 || offset > sourceText.length) {
       throw RangeError.range(offset, 0, sourceText.length, 'offset');
     }
