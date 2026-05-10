@@ -23,7 +23,8 @@ class InstantiationGenerator {
 
     // Generate parameter overrides if any
     if (inst.parameterValues.isNotEmpty) {
-      _generateParameterizedInstantiation(buffer, className, instanceName, inst);
+      _generateParameterizedInstantiation(
+          buffer, className, instanceName, inst);
     } else {
       _generateSimpleInstantiation(buffer, className, instanceName, inst);
     }
@@ -94,7 +95,9 @@ class NamingStrategy {
     final parts = name.split('_');
     return parts
         .map(
-          (p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
+          (p) => p.isEmpty
+              ? ''
+              : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
         )
         .join();
   }
