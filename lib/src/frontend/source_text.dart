@@ -46,7 +46,8 @@ class SourceText {
 
   /// Returns the original offset for a preprocessed offset.
   int toOriginalOffset(int preprocessedOffset) {
-    return _sourceMap.toOriginalOffset(preprocessedOffset) ?? preprocessedOffset;
+    return _sourceMap.toOriginalOffset(preprocessedOffset) ??
+        preprocessedOffset;
   }
 }
 
