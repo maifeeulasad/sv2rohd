@@ -39,7 +39,8 @@ class Frontend {
       includePaths: includePaths,
       predefinedMacros: predefinedMacros,
     );
-    final preprocessed = preprocessor.preprocess(source, sourceName: sourceName);
+    final preprocessed =
+        preprocessor.preprocess(source, sourceName: sourceName);
 
     // Tokenize
     final lexer = LexerAdapter(
