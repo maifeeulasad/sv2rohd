@@ -1,0 +1,51 @@
+name: sv2rohd
+description: SystemVerilog to ROHD converter - translates SystemVerilog hardware designs to ROHD Dart code
+version: 0.0.0
+author: Maifee Ul Asad
+homepage: https://github.com/maifeeulasad/sv2rohd
+repository: https://github.com/maifeeulasad/sv2rohd
+issue_tracker: https://github.com/maifeeulasad/sv2rohd/issues
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # Parser generation
+  antlr4: ^4.13.0
+  antlr4_runtime: ^4.13.0
+
+  # Utilities
+  path: ^1.9.0
+  args: ^2.4.0
+  collection: ^1.18.0
+  yaml: ^3.1.0
+
+  # ROHD for generated code validation
+  rohd: ^0.5.1
+
+dev_dependencies:
+  test: ^1.24.0
+  build_runner: ^2.4.0
+  lints: ^3.0.0
+  mockito: ^5.4.0
+  path_provider: ^2.1.0
+
+executables:
+  sv2rohd: bin/sv2rohd.dart
+
+topics:
+  - systemverilog
+  - rohd
+  - hardware
+  - hdl
+  - converter
+  - fpga
+  - verilog
+
+keywords:
+  - sv2rohd
+  - systemverilog
+  - rohd
+  - hardware-description
+  - hdl
+  - converter
