@@ -55,9 +55,7 @@ class SourceRange {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is SourceRange &&
-        other.start == start &&
-        other.end == end;
+    return other is SourceRange && other.start == start && other.end == end;
   }
 
   @override
