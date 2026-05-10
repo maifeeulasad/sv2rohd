@@ -11,8 +11,8 @@ class ExpressionInfo {
   final TypeInfo type;
   final bool isConstant;
   final dynamic constValue;
-  final Set<String> referencedSignals = {};
-  final Set<String> referencedParameters = {};
+  final Set<String> referencedSignals;
+  final Set<String> referencedParameters;
 
   const ExpressionInfo({
     required this.type,
