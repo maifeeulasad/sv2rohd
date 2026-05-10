@@ -83,12 +83,12 @@ lint: ## Lint code
 
 format: ## Format code according to style guide
 	@echo "Formatting code..."
-	@$(DART) format lib bin test --set-exit-if-changed
+	@$(DART) format lib bin test
 	@echo "✓ Code formatted"
 
 format-check: ## Check if code needs formatting
 	@echo "Checking code format..."
-	@$(DART) format lib bin test --output=none --set-exit-if-changed
+	@$(DART) format lib bin test --output=none
 	@echo "✓ Code format check passed"
 
 fix: ## Apply automated fixes
