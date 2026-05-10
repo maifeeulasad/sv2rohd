@@ -70,7 +70,8 @@ class SV2ROHD {
 void main(List<String> arguments) {
   final parser = ArgParser()
     ..addOption('output', abbr: 'o', help: 'Output file path')
-    ..addOption('include', abbr: 'I', help: 'Include search path', allowMultiple: true)
+    ..addOption('include',
+        abbr: 'I', help: 'Include search path', allowMultiple: true)
     ..addFlag('verbose', abbr: 'v', help: 'Verbose output')
     ..addFlag('help', abbr: 'h', help: 'Show help');
 
