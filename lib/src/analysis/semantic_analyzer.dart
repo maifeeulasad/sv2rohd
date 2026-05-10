@@ -27,7 +27,7 @@ class SemanticAnalyzer {
     final moduleSymbol = Symbol(
       name: module.name,
       kind: SymbolKind.module,
-      definitionLocation: module.location,
+      definitionLocation: SourceRange.point(module.location),
       definedInScope: symbolTable.currentScope!,
     );
     symbolTable.define(module.name, moduleSymbol);
@@ -61,7 +61,7 @@ class SemanticAnalyzer {
     final portSymbol = Symbol(
       name: port.name,
       kind: SymbolKind.port,
-      definitionLocation: port.location,
+      definitionLocation: SourceRange.point(port.location),
       definedInScope: symbolTable.currentScope!,
       portDirection: _convertPortDirection(port.direction),
       width: _getWidth(port.width),
@@ -73,7 +73,7 @@ class SemanticAnalyzer {
     final paramSymbol = Symbol(
       name: param.name,
       kind: SymbolKind.parameter,
-      definitionLocation: param.location,
+      definitionLocation: SourceRange.point(param.location),
       definedInScope: symbolTable.currentScope!,
       defaultValue: param.defaultValue,
     );
@@ -100,7 +100,7 @@ class SemanticAnalyzer {
     final signalSymbol = Symbol(
       name: signal.name,
       kind: SymbolKind.signal,
-      definitionLocation: signal.location,
+      definitionLocation: SourceRange.point(signal.location),
       definedInScope: symbolTable.currentScope!,
       width: _getWidth(signal.width),
     );
@@ -236,7 +236,7 @@ class SemanticAnalyzer {
       final portSymbol = Symbol(
         name: port.name,
         kind: SymbolKind.port,
-        definitionLocation: port.location,
+        definitionLocation: SourceRange.point(port.location),
         definedInScope: symbolTable.currentScope!,
         portDirection: port.direction,
       );
@@ -261,7 +261,7 @@ class SemanticAnalyzer {
       final portSymbol = Symbol(
         name: port.name,
         kind: SymbolKind.port,
-        definitionLocation: port.location,
+        definitionLocation: SourceRange.point(port.location),
         definedInScope: symbolTable.currentScope!,
         portDirection: port.direction,
       );
@@ -330,5 +330,5 @@ class SemanticAnalyzer {
 }
 
 extension on SourceLocation {
-  SourceRange toRange() => SourceRange(this, this);
+  SourceRange toRange() => SourceRange(start: this, end: this);
 }
