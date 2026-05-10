@@ -24,7 +24,12 @@ class SourceText {
   /// Returns the source location for a given offset.
   SourceLocation getLocation(int offset) {
     if (offset < 0 || offset > text.length) {
-      return SourceLocation(sourceName, 0, 0, offset);
+      return SourceLocation(
+        sourceName: sourceName,
+        line: 0,
+        column: 0,
+        offset: offset,
+      );
     }
 
     int line = 1;
@@ -41,7 +46,12 @@ class SourceText {
       currentOffset++;
     }
 
-    return SourceLocation(sourceName, line, column, offset);
+    return SourceLocation(
+      sourceName: sourceName,
+      line: line,
+      column: column,
+      offset: offset,
+    );
   }
 
   /// Returns the original offset for a preprocessed offset.
