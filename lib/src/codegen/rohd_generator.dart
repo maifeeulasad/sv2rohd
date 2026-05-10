@@ -113,13 +113,16 @@ class RohdGenerator {
 
       switch (port.direction) {
         case PortDirection.input:
-          _writeLine("final $portName = addInput('${port.name}', width: $width);");
+          _writeLine(
+              "final $portName = addInput('${port.name}', width: $width);");
           break;
         case PortDirection.output:
-          _writeLine("final $portName = addOutput('${port.name}', width: $width);");
+          _writeLine(
+              "final $portName = addOutput('${port.name}', width: $width);");
           break;
         case PortDirection.inout:
-          _writeLine("final $portName = addInOut('${port.name}', width: $width);");
+          _writeLine(
+              "final $portName = addInOut('${port.name}', width: $width);");
           break;
       }
     }
@@ -394,7 +397,11 @@ class NamingStrategy {
   String toClassName(String name) {
     // Convert snake_case to PascalCase
     final parts = name.split('_');
-    return parts.map((p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}').join();
+    return parts
+        .map((p) => p.isEmpty
+            ? ''
+            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
+        .join();
   }
 
   String toCamelCase(String name) {
