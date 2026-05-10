@@ -1,4 +1,4 @@
-// Copyright (C) 2026
+// Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // Multiplier module with instantiation
 
 module multiplier #(
