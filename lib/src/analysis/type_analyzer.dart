@@ -166,9 +166,7 @@ class TypeAnalyzer {
       case LiteralKind.time:
         return TypeInfo.logic(64);
       case LiteralKind.bitVector:
-        return TypeInfo.logic(
-            (literal.value as List).length,
-            signed: false);
+        return TypeInfo.logic((literal.value as List).length, signed: false);
     }
   }
 
