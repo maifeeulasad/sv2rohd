@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../ir/ir.dart';
+import 'naming_strategy.dart';
+import 'expression_generator.dart';
 
 /// Generates ROHD module instantiations from IR.
 class InstantiationGenerator {
@@ -84,27 +86,5 @@ class InstantiationGenerator {
       // Connected to signal with same name
       return portName;
     }
-  }
-}
-
-/// Naming strategy for code generation.
-class NamingStrategy {
-  const NamingStrategy();
-
-  String toClassName(String name) {
-    final parts = name.split('_');
-    return parts
-        .map(
-          (p) => p.isEmpty
-              ? ''
-              : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
-        )
-        .join();
-  }
-
-  String toCamelCase(String name) {
-    final className = toClassName(name);
-    if (className.isEmpty) return className;
-    return '${className[0].toLowerCase()}${className.substring(1)}';
   }
 }
