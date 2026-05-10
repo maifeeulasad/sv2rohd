@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../common/common.dart';
+import '../ir/ir.dart';
 import 'scope.dart';
 
 /// Represents a symbol in the symbol table.
@@ -26,6 +27,10 @@ class Symbol {
     this.type,
     required this.definitionLocation,
     required this.definedInScope,
+    this.width,
+    this.defaultValue,
+    this.moduleType,
+    this.portDirection,
   });
 
   @override
@@ -112,57 +117,4 @@ class AnalysisResult {
 
   bool get hasErrors => errors.isNotEmpty;
   bool get hasWarnings => warnings.isNotEmpty;
-}
-
-/// Interface for types.
-abstract class IrType {
-  String get name;
-  int? get width;
-  bool get isSigned;
-}
-
-/// Basic logic type.
-class LogicType implements IrType {
-  final int? width;
-  final bool isSigned;
-
-  const LogicType({this.width, this.isSigned = false});
-
-  @override
-  String get name => width != null ? 'logic[$width]' : 'logic';
-
-  @override
-  int? get width => width;
-
-  @override
-  bool get isSigned => isSigned;
-}
-
-/// Integer type.
-class IntegerType implements IrType {
-  final int bits;
-
-  const IntegerType({this.bits = 32});
-
-  @override
-  String get name => 'integer';
-
-  @override
-  int? get width => bits;
-}
-
-/// Real type.
-class RealType implements IrType {
-  const RealType();
-
-  @override
-  String get name => 'real';
-
-  @override
-  int? get width => null;
-}
-
-/// Placeholder for IR expressions.
-abstract class IrExpression {
-  IrExpression? resolve();
 }
