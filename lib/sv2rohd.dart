@@ -9,4 +9,6 @@ library sv2rohd;
 export 'src/common/common.dart';
 export 'src/frontend/frontend.dart';
 export 'src/ir/ir.dart';
+export 'src/analysis/analysis.dart';
+export 'src/codegen/codegen.dart';
 export 'src/sv2rohd.dart';
