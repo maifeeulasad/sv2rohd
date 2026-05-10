@@ -1,7 +1,6 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
-import '../common/common.dart';
 import '../ir/ir.dart';
 import 'expression_generator.dart';
 import 'signal_generator.dart';
@@ -301,8 +300,7 @@ class RohdGenerator {
     }
 
     if (stmt.items.isEmpty ||
-        stmt.items.last is! CaseItem ||
-        (stmt.items.last as CaseItem).values.isNotEmpty) {
+        (stmt.items.last).values.isNotEmpty) {
       // No default case
     }
 

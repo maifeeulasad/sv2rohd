@@ -1,10 +1,7 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
-import '../common/common.dart';
 import 'ir_node.dart';
-import 'expression_ir.dart';
-import 'statement_ir.dart';
 
 /// Represents a module declaration in the IR.
 class ModuleDeclaration extends IrNode {
@@ -380,7 +377,7 @@ class FunctionDeclaration extends IrNode {
 
   @override
   List<IrNode> get children => [
-        ...?([returnType]),
+        ...([returnType]),
         ...ports,
         ...items
       ];

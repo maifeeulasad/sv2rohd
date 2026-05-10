@@ -206,7 +206,7 @@ class StatementGenerator {
 
   void _generateWhileLoop(StringBuffer buffer, WhileLoopStatement stmt) {
     final condition =
-        stmt.condition != null ? exprGen.generate(stmt.condition!) : 'true';
+        exprGen.generate(stmt.condition);
 
     _writeLine(buffer, 'while ($condition) {');
     _indent();

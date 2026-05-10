@@ -1,7 +1,6 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
-import 'package:antlr4/antlr4.dart';
 import '../common/common.dart';
 import '../frontend/frontend.dart';
 import 'ir_node.dart';
@@ -9,7 +8,6 @@ import 'expression_ir.dart';
 import 'statement_ir.dart';
 import 'module_ir.dart';
 import 'ir_visitor.dart';
-import 'ir_printer.dart';
 
 /// Builds IR from the parse tree.
 class IrBuilder {

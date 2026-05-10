@@ -1,9 +1,7 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
-import '../common/common.dart';
 import 'ir_node.dart';
-import 'expression_ir.dart';
 
 /// Represents an assignment statement.
 class AssignmentStatement extends IrStatement {
