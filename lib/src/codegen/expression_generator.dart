@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../ir/ir.dart';
+import 'naming_strategy.dart';
 
 /// Generates ROHD expressions from IR expressions.
 class ExpressionGenerator {
@@ -168,25 +169,5 @@ class ExpressionGenerator {
     final msb = generate(expr.msb);
     final lsb = generate(expr.lsb);
     return '$base[$msb:$lsb]';
-  }
-}
-
-/// Simple naming strategy.
-class NamingStrategy {
-  const NamingStrategy();
-
-  String toClassName(String name) {
-    final parts = name.split('_');
-    return parts
-        .map((p) => p.isEmpty
-            ? ''
-            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}')
-        .join();
-  }
-
-  String toCamelCase(String name) {
-    final className = toClassName(name);
-    if (className.isEmpty) return className;
-    return '${className[0].toLowerCase()}${className.substring(1)}';
   }
 }
