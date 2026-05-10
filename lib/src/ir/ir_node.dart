@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../common/common.dart';
+import 'ir_visitor.dart';
 
 /// Base class for all IR nodes.
 abstract class IrNode {
@@ -26,7 +27,7 @@ abstract class IrDeclaration extends IrNode {
   final String name;
 
   IrDeclaration({
-    required this.location,
+    required super.location,
     required this.name,
   });
 }
@@ -47,24 +48,35 @@ abstract class IrType extends IrNode {
 }
 
 /// Represents a vector width.
-class VectorWidth {
+class VectorWidth extends IrExpression {
   final IrExpression? msb;
   final IrExpression? lsb;
 
-  const VectorWidth({this.msb, this.lsb});
+  VectorWidth({
+    SourceLocation? location,
+    this.msb,
+    this.lsb,
+  }) : super(location: location ?? SourceLocation.dummy());
 
   /// Returns true if this is a scalar (no range).
   bool get isScalar => msb == null && lsb == null;
 
   /// Returns true if this is a packed array.
   bool get isPacked => msb != null && lsb != null;
-}
 
-/// Represents a port direction.
-enum PortDirection {
-  input,
-  output,
-  inout,
+  @override
+  List<IrNode> get children {
+    final children = <IrNode>[];
+    if (msb != null) children.add(msb!);
+    if (lsb != null) children.add(lsb!);
+    return children;
+  }
+
+  @override
+  String get nodeType => 'VectorWidth';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(this);
 }
 
 /// Represents a signal type.
@@ -92,23 +104,3 @@ enum AssignmentType {
   procedural,
 }
 
-/// Visitor interface for IR nodes.
-abstract class IrVisitor<T> {
-  T visitModule(ModuleDeclaration node);
-  T visitPort(PortDeclaration node);
-  T visitSignal(SignalDeclaration node);
-  T visitParameter(ParameterDeclaration node);
-  T visitExpression(IrExpression node);
-  T visitBinaryOp(BinaryExpression node);
-  T visitUnaryOp(UnaryExpression node);
-  T visitIdentifier(IdentifierExpression node);
-  T visitLiteral(LiteralExpression node);
-  T visitStatement(IrStatement node);
-  T visitAssignment(AssignmentStatement node);
-  T visitIfStatement(IfStatement node);
-  T visitCaseStatement(CaseStatement node);
-  T visitForLoop(ForLoopStatement node);
-  T visitWhileLoop(WhileLoopStatement node);
-  T visitModuleInstantiation(ModuleInstantiation node);
-  T visitGenerateBlock(GenerateBlock node);
-}
