@@ -3,9 +3,10 @@
 
 import 'package:args/args.dart';
 import 'package:path/path.dart' as p;
-import 'src/common/common.dart';
-import 'src/frontend/frontend.dart';
-import 'src/ir/ir.dart';
+import 'common/common.dart';
+import 'codegen/naming_strategy.dart';
+import 'frontend/frontend.dart';
+import 'ir/ir.dart';
 
 /// Main entry point for sv2rohd.
 class SV2ROHD {
