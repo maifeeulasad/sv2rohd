@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../ir/ir.dart';
+import '../analysis/symbol.dart';
 import 'expression_generator.dart';
 import 'signal_generator.dart';
 import 'module_generator.dart';
@@ -304,8 +305,7 @@ class RohdGenerator {
       _generateCaseItem(item);
     }
 
-    if (stmt.items.isEmpty ||
-        (stmt.items.last).values.isNotEmpty) {
+    if (stmt.items.isEmpty || (stmt.items.last).values.isNotEmpty) {
       // No default case
     }
 
@@ -392,4 +392,3 @@ class RohdGenerator {
     }
   }
 }
-
