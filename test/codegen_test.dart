@@ -150,6 +150,7 @@ void main() {
       final signal = SignalDeclaration(
         location: SourceLocation.dummy(),
         name: 'data_out',
+        signalType: SignalType.logic,
       );
       final buffer = StringBuffer();
       signalGen.generateSignal(buffer, signal);
@@ -160,6 +161,7 @@ void main() {
       final signal = SignalDeclaration(
         location: SourceLocation.dummy(),
         name: 'data_bus',
+        signalType: SignalType.logic,
         width: VectorWidth(
           location: SourceLocation.dummy(),
           msb: LiteralExpression(
