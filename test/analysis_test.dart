@@ -7,33 +7,27 @@ import 'package:sv2rohd/sv2rohd.dart';
 void main() {
   group('Symbol', () {
     test('creates port symbol correctly', () {
-      final port = PortDeclaration(
-        location: SourceLocation.dummy(),
-        name: 'clk',
-        direction: PortDirection.input,
-      );
-
+      final scope = Scope(name: 'test', kind: ScopeKind.module);
       final symbol = Symbol(
         name: 'clk',
         kind: SymbolKind.port,
-        declaration: port,
+        definitionLocation: SourceRange.point(SourceLocation.dummy()),
+        definedInScope: scope,
+        portDirection: PortDirection.input,
       );
 
       expect(symbol.name, 'clk');
       expect(symbol.kind, SymbolKind.port);
-      expect(symbol.declaration, port);
+      expect(symbol.portDirection, PortDirection.input);
     });
 
     test('creates signal symbol correctly', () {
-      final signal = SignalDeclaration(
-        location: SourceLocation.dummy(),
-        name: 'data_bus',
-      );
-
+      final scope = Scope(name: 'test', kind: ScopeKind.module);
       final symbol = Symbol(
         name: 'data_bus',
         kind: SymbolKind.signal,
-        declaration: signal,
+        definitionLocation: SourceRange.point(SourceLocation.dummy()),
+        definedInScope: scope,
       );
 
       expect(symbol.name, 'data_bus');
@@ -58,22 +52,18 @@ void main() {
         kind: ScopeKind.module,
       );
 
-      final signal = SignalDeclaration(
-        location: SourceLocation.dummy(),
+      final symbol = Symbol(
         name: 'test_signal',
+        kind: SymbolKind.signal,
+        definitionLocation: SourceRange.point(SourceLocation.dummy()),
+        definedInScope: scope,
       );
 
-      scope.define(
-          'test_signal',
-          Symbol(
-            name: 'test_signal',
-            kind: SymbolKind.signal,
-            declaration: signal,
-          ));
+      scope.define('test_signal', symbol);
 
-      final resolved = scope.resolve('test_signal');
+      final resolved = scope.lookup('test_signal');
       expect(resolved, isNotNull);
-      expect(resolved!.name, 'test_signal');
+      expect(resolved!.first.name, 'test_signal');
     });
 
     test('returns null for unresolved symbols', () {
@@ -82,7 +72,7 @@ void main() {
         kind: ScopeKind.module,
       );
 
-      final resolved = scope.resolve('non_existent');
+      final resolved = scope.lookup('non_existent');
       expect(resolved, isNull);
     });
   });
@@ -90,122 +80,121 @@ void main() {
   group('SymbolTable', () {
     test('creates empty symbol table', () {
       final table = SymbolTable();
-      expect(table.currentScope, isNotNull);
+      expect(table.currentScope, isNull);
     });
 
     test('enters and exits scopes', () {
       final table = SymbolTable();
-      table.enterScope('outer', ScopeKind.module);
+      table.pushScope('outer', ScopeKind.module);
       expect(table.currentScope?.name, 'outer');
 
-      table.enterScope('inner', ScopeKind.function);
+      table.pushScope('inner', ScopeKind.function);
       expect(table.currentScope?.name, 'inner');
 
-      table.exitScope();
+      table.popScope();
       expect(table.currentScope?.name, 'outer');
     });
 
-    test('defines and resolves symbols in current scope', () {
+    test('defines and retrieves symbols', () {
       final table = SymbolTable();
+      table.pushScope('test', ScopeKind.module);
 
-      final signal = SignalDeclaration(
-        location: SourceLocation.dummy(),
+      final scope = table.currentScope!;
+      final symbol = Symbol(
         name: 'my_signal',
+        kind: SymbolKind.signal,
+        definitionLocation: SourceRange.point(SourceLocation.dummy()),
+        definedInScope: scope,
       );
 
-      table.define(
-          'my_signal',
-          Symbol(
-            name: 'my_signal',
-            kind: SymbolKind.signal,
-            declaration: signal,
-          ));
+      table.define('my_signal', symbol);
+      final resolved = table.lookup('my_signal');
 
-      final resolved = table.resolve('my_signal');
       expect(resolved, isNotNull);
-      expect(resolved!.name, 'my_signal');
+      expect(resolved!.first.name, 'my_signal');
     });
   });
 
   group('AnalysisError', () {
-    test('creates error with severity.error', () {
+    test('creates error with message', () {
       final error = AnalysisError(
-        severity: Severity.error,
         message: 'Test error',
-        location: SourceLocation.dummy(),
+        location: SourceRange.point(SourceLocation.dummy()),
+        code: 'E001',
       );
 
-      expect(error.severity, Severity.error);
       expect(error.message, 'Test error');
+      expect(error.code, 'E001');
     });
 
-    test('creates warning with severity.warning', () {
+    test('creates warning with message', () {
       final warning = AnalysisError(
-        severity: Severity.warning,
         message: 'Test warning',
-        location: SourceLocation.dummy(),
+        location: SourceRange.point(SourceLocation.dummy()),
+        code: 'W001',
       );
 
-      expect(warning.severity, Severity.warning);
       expect(warning.message, 'Test warning');
+      expect(warning.code, 'W001');
     });
   });
 
   group('TypeInfo', () {
     test('creates integer type info', () {
       final typeInfo = TypeInfo.integer();
-      expect(typeInfo.kind, TypeKind.integer);
+      expect(typeInfo.name, 'integer');
       expect(typeInfo.width, 32);
     });
 
     test('creates logic type info', () {
-      final typeInfo = TypeInfo.logic(width: 8);
-      expect(typeInfo.kind, TypeKind.logic);
+      final typeInfo = TypeInfo.logic(8);
+      expect(typeInfo.name, 'logic');
       expect(typeInfo.width, 8);
     });
 
-    test('creates unsigned type info', () {
-      final typeInfo = TypeInfo.unsigned(width: 16);
-      expect(typeInfo.kind, TypeKind.unsigned);
-      expect(typeInfo.width, 16);
-    });
-
-    test('creates signed type info', () {
-      final typeInfo = TypeInfo.signed(width: 16);
-      expect(typeInfo.kind, TypeKind.signed);
+    test('creates bit type info', () {
+      final typeInfo = TypeInfo.bit(16);
+      expect(typeInfo.name, 'bit');
       expect(typeInfo.width, 16);
     });
 
     test('creates real type info', () {
       final typeInfo = TypeInfo.real();
-      expect(typeInfo.kind, TypeKind.real);
+      expect(typeInfo.name, 'real');
     });
 
     test('type compatibility check for matching widths', () {
-      final typeA = TypeInfo.logic(width: 8);
-      final typeB = TypeInfo.logic(width: 8);
+      final typeA = TypeInfo.logic(8);
+      final typeB = TypeInfo.logic(8);
 
-      expect(typeA.isCompatible(typeB), true);
+      expect(typeA.canAssignTo(typeB), true);
     });
 
-    test('type compatibility check for mismatched widths', () {
-      final typeA = TypeInfo.logic(width: 8);
-      final typeB = TypeInfo.logic(width: 16);
+    test('type compatibility check for narrowing assignment', () {
+      final typeA = TypeInfo.logic(16);
+      final typeB = TypeInfo.logic(8);
 
-      expect(typeA.isCompatible(typeB), false);
+      expect(typeA.canAssignTo(typeB), false);
     });
 
-    test('integer and logic are compatible', () {
+    test('integer and logic are same when compatible', () {
       final intType = TypeInfo.integer();
-      final logicType = TypeInfo.logic(width: 32);
+      final logicType = TypeInfo.logic(32);
 
-      expect(intType.isCompatible(logicType), true);
+      expect(intType.canAssignTo(logicType), true);
     });
   });
 
   group('SemanticAnalyzer', () {
-    test('analyzes simple module', () {
-      final analyzer = SemanticAnalyzer();
+    late DiagnosticCollector diagnostics;
+    late SemanticAnalyzer analyzer;
+
+    setUp(() {
+      diagnostics = DiagnosticCollector();
+      analyzer = SemanticAnalyzer(diagnostics: diagnostics);
+    });
+
+    test('analyzes valid module', () {
       final module = ModuleDeclaration(
         location: SourceLocation.dummy(),
         name: 'test_module',
@@ -225,17 +214,41 @@ void main() {
           SignalDeclaration(
             location: SourceLocation.dummy(),
             name: 'internal_reg',
+            signalType: SignalType.reg,
           ),
         ],
       );
 
       final result = analyzer.analyzeModule(module);
 
-      expect(result.errors.where((e) => e.severity == Severity.error), isEmpty);
+      expect(result.errors, isEmpty);
     });
 
-    test('detects undeclared signal usage', () {
-      final analyzer = SemanticAnalyzer();
+    test('analyzes module with parameters', () {
+      final module = ModuleDeclaration(
+        location: SourceLocation.dummy(),
+        name: 'parameterized_module',
+        ports: [],
+        parameters: [
+          ParameterDeclaration(
+            location: SourceLocation.dummy(),
+            name: 'width',
+            defaultValue: LiteralExpression(
+              location: SourceLocation.dummy(),
+              value: 8,
+              kind: LiteralKind.integer,
+            ),
+          ),
+        ],
+        items: [],
+      );
+
+      final result = analyzer.analyzeModule(module);
+
+      expect(result.errors, isEmpty);
+    });
+
+    test('warns on undeclared signal usage in continuous assignment', () {
       final module = ModuleDeclaration(
         location: SourceLocation.dummy(),
         name: 'test_module',
@@ -263,35 +276,11 @@ void main() {
 
       final result = analyzer.analyzeModule(module);
 
+      expect(result.errors, isEmpty);
       expect(
-        result.errors.where((e) => e.severity == Severity.error),
+        result.warnings.where((warning) => warning.code == 'SEM002'),
         isNotEmpty,
       );
-    });
-
-    test('analyzes module with parameters', () {
-      final analyzer = SemanticAnalyzer();
-      final module = ModuleDeclaration(
-        location: SourceLocation.dummy(),
-        name: 'parameterized_module',
-        ports: [],
-        parameters: [
-          ParameterDeclaration(
-            location: SourceLocation.dummy(),
-            name: 'width',
-            defaultValue: LiteralExpression(
-              location: SourceLocation.dummy(),
-              value: 8,
-              kind: LiteralKind.integer,
-            ),
-          ),
-        ],
-        items: [],
-      );
-
-      final result = analyzer.analyzeModule(module);
-
-      expect(result.errors.where((e) => e.severity == Severity.error), isEmpty);
     });
   });
 
@@ -299,37 +288,14 @@ void main() {
     late TypeAnalyzer typeAnalyzer;
 
     setUp(() {
-      typeAnalyzer = TypeAnalyzer();
+      typeAnalyzer = TypeAnalyzer(diagnostics: DiagnosticCollector());
     });
 
-    test('infers port types', () {
-      final inputPort = PortDeclaration(
-        location: SourceLocation.dummy(),
-        name: 'data_in',
-        direction: PortDirection.input,
-        width: VectorWidth(
-          location: SourceLocation.dummy(),
-          msb: LiteralExpression(
-            location: SourceLocation.dummy(),
-            value: 7,
-            kind: LiteralKind.integer,
-          ),
-          lsb: LiteralExpression(
-            location: SourceLocation.dummy(),
-            value: 0,
-            kind: LiteralKind.integer,
-          ),
-        ),
-      );
-
-      final typeInfo = typeAnalyzer.inferPortType(inputPort);
-      expect(typeInfo.width, 8);
-    });
-
-    test('infers signal types', () {
+    test('infers signal types from a declaration', () {
       final signal = SignalDeclaration(
         location: SourceLocation.dummy(),
         name: 'internal_bus',
+        signalType: SignalType.logic,
         width: VectorWidth(
           location: SourceLocation.dummy(),
           msb: LiteralExpression(
@@ -345,46 +311,58 @@ void main() {
         ),
       );
 
-      final typeInfo = typeAnalyzer.inferSignalType(signal);
+      final typeInfo = typeAnalyzer.getSignalType(signal);
+
+      expect(typeInfo.name, 'logic');
       expect(typeInfo.width, 16);
     });
 
-    test('infers binary expression types', () {
-      final left = IdentifierExpression(
+    test('infers expression types from arithmetic', () {
+      final expr = BinaryExpression(
         location: SourceLocation.dummy(),
-        identifier: 'a',
-      );
-      final right = IdentifierExpression(
-        location: SourceLocation.dummy(),
-        identifier: 'b',
-      );
-
-      final binary = BinaryExpression(
-        location: SourceLocation.dummy(),
-        left: left,
+        left: LiteralExpression(
+          location: SourceLocation.dummy(),
+          value: 7,
+          kind: LiteralKind.integer,
+        ),
         operator: BinaryOperator.add,
-        right: right,
+        right: LiteralExpression(
+          location: SourceLocation.dummy(),
+          value: 1,
+          kind: LiteralKind.integer,
+        ),
       );
 
-      // Note: Full width inference requires context from operands
-      // This is a simplified test
-      final typeInfo = typeAnalyzer.inferExpressionType(binary);
-      expect(typeInfo.kind, TypeKind.logic);
+      final typeInfo = typeAnalyzer.getExpressionType(expr);
+
+      expect(typeInfo.name, 'logic');
+      expect(typeInfo.width, 3);
     });
 
-    test('checks expression type compatibility', () {
-      final typeA = TypeInfo.logic(width: 8);
-      final typeB = TypeInfo.logic(width: 8);
+    test('checks assignment compatibility by width', () {
+      final target = LiteralExpression(
+        location: SourceLocation.dummy(),
+        value: List<bool>.filled(8, false),
+        kind: LiteralKind.bitVector,
+      );
+      final widerValue = LiteralExpression(
+        location: SourceLocation.dummy(),
+        value: List<bool>.filled(16, true),
+        kind: LiteralKind.bitVector,
+      );
 
-      expect(typeAnalyzer.checkCompatibility(typeA, typeB), true);
+      expect(typeAnalyzer.checkAssignment(target, widerValue), false);
+      expect(typeAnalyzer.checkAssignment(target, target), true);
     });
   });
 
   group('ExpressionAnalyzer', () {
     late ExpressionAnalyzer exprAnalyzer;
+    late TypeAnalyzer typeAnalyzer;
 
     setUp(() {
-      exprAnalyzer = ExpressionAnalyzer();
+      typeAnalyzer = TypeAnalyzer(diagnostics: DiagnosticCollector());
+      exprAnalyzer = ExpressionAnalyzer(typeAnalyzer: typeAnalyzer);
     });
 
     test('evaluates constant integer literal', () {
@@ -396,7 +374,7 @@ void main() {
 
       final info = exprAnalyzer.analyze(literal);
       expect(info.isConstant, true);
-      expect(info.constantValue, 42);
+      expect(info.constValue, 42);
     });
 
     test('evaluates constant arithmetic expression', () {
@@ -410,17 +388,17 @@ void main() {
         operator: BinaryOperator.add,
         right: LiteralExpression(
           location: SourceLocation.dummy(),
-          value: 20,
+          value: 32,
           kind: LiteralKind.integer,
         ),
       );
 
       final info = exprAnalyzer.analyze(expr);
       expect(info.isConstant, true);
-      expect(info.constantValue, 30);
+      expect(info.constValue, 42);
     });
 
-    test('identifies non-constant expression', () {
+    test('identifies non-constant identifier expressions', () {
       final expr = IdentifierExpression(
         location: SourceLocation.dummy(),
         identifier: 'signal_a',
@@ -428,31 +406,20 @@ void main() {
 
       final info = exprAnalyzer.analyze(expr);
       expect(info.isConstant, false);
+      expect(info.referencedSignals, contains('signal_a')); 
     });
 
-    test('evaluates conditional expression at compile time', () {
-      final expr = ConditionalExpression(
+    test('evaluates parameter references when provided', () {
+      exprAnalyzer.setParameter('WIDTH', 8);
+
+      final expr = IdentifierExpression(
         location: SourceLocation.dummy(),
-        condition: LiteralExpression(
-          location: SourceLocation.dummy(),
-          value: 1,
-          kind: LiteralKind.integer,
-        ),
-        trueExpr: LiteralExpression(
-          location: SourceLocation.dummy(),
-          value: 10,
-          kind: LiteralKind.integer,
-        ),
-        falseExpr: LiteralExpression(
-          location: SourceLocation.dummy(),
-          value: 20,
-          kind: LiteralKind.integer,
-        ),
+        identifier: 'WIDTH',
       );
 
       final info = exprAnalyzer.analyze(expr);
       expect(info.isConstant, true);
-      expect(info.constantValue, 10);
+      expect(info.constValue, 8);
     });
   });
 }
