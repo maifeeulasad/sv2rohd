@@ -162,12 +162,14 @@ class CaseStatement extends IrStatement {
   final IrExpression expression;
   final List<CaseItem> items;
   final CaseKind kind;
+  final IrStatement? defaultCase;
 
   CaseStatement({
     required super.location,
     required this.expression,
     required this.items,
     this.kind = CaseKind.normal,
+    this.defaultCase,
   });
 
   @override
