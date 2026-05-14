@@ -3,6 +3,7 @@
 
 import '../common/common.dart';
 import '../frontend/frontend.dart';
+import '../codegen/naming_strategy.dart';
 import 'ir_node.dart';
 import 'expression_ir.dart';
 import 'statement_ir.dart';
@@ -30,7 +31,8 @@ class IrBuilder {
     // Implementation would traverse the parse tree
     // For now, create a placeholder
     return ModuleDeclaration(
-      location: SourceLocation('unknown', 0, 0, 0),
+      location:
+          SourceLocation(sourceName: 'unknown', line: 0, column: 0, offset: 0),
       name: 'unnamed_module',
     );
   }
@@ -39,7 +41,8 @@ class IrBuilder {
   IrExpression convertExpression(dynamic ctx) {
     // Placeholder - actual implementation would traverse parse tree
     return LiteralExpression(
-      location: SourceLocation('unknown', 0, 0, 0),
+      location:
+          SourceLocation(sourceName: 'unknown', line: 0, column: 0, offset: 0),
       kind: LiteralKind.integer,
       value: 0,
     );
@@ -48,7 +51,9 @@ class IrBuilder {
   /// Converts statements.
   IrStatement convertStatement(dynamic ctx) {
     // Placeholder - actual implementation would traverse parse tree
-    return EmptyStatement(location: SourceLocation('unknown', 0, 0, 0));
+    return EmptyStatement(
+        location: SourceLocation(
+            sourceName: 'unknown', line: 0, column: 0, offset: 0));
   }
 }
 
@@ -103,7 +108,7 @@ class RohdTranslator extends DefaultIrVisitor<String> {
     _buffer.write(text);
   }
 
-  void _writeLine(String text) {
+  void _writeLine([String text = '']) {
     _buffer.writeln(text);
   }
 
