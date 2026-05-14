@@ -182,13 +182,13 @@ class TestbenchDeclaration extends IrNode {
   String get nodeType => 'TestbenchDeclaration';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => null as T;
 }
 
 /// Test definition.
 class TestDefinition extends IrNode {
   final String name;
-  final IrExpression? clock;
+  final ClockGeneration? clock;
   final ResetSequence? resetSequence;
   final List<StimulusDefinition> stimuli;
   final IrExpression? duration;
@@ -216,7 +216,7 @@ class TestDefinition extends IrNode {
   String get nodeType => 'TestDefinition';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => null as T;
 }
 
 /// Clock generation.
@@ -235,7 +235,7 @@ class ClockGeneration extends IrNode {
   String get nodeType => 'ClockGeneration';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(period);
 }
 
 /// Reset sequence.
@@ -256,7 +256,7 @@ class ResetSequence extends IrNode {
   String get nodeType => 'ResetSequence';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(duration);
 }
 
 /// Stimulus definition.
@@ -281,7 +281,8 @@ class StimulusDefinition extends IrNode {
   String get nodeType => 'StimulusDefinition';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) =>
+      value != null ? visitor.visitExpression(value!) : (null as T);
 }
 
 /// Stimulus kind.
