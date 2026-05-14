@@ -22,11 +22,11 @@ class LexerAdapter {
 
   /// Tokenizes the source text.
   List<Token> tokenize() {
-    final inputStream = CharStreams.fromString(source, name: sourceName);
-    final lexer = SystemVerilogLexer(inputStream);
-
-    lexer.addErrorListener(LexerErrorListener(diagnostics));
-    _tokens.addAll(lexer.getAllTokens());
+    final inputStream = InputStream.fromString(source);
+    // todo: need to revisit, @maifeeulasad
+    // Note: SystemVerilogLexer would be generated from grammar files
+    // For now, return empty list as placeholder
+    _tokens.clear();
 
     // Sort tokens by start position
     _tokens.sort((a, b) => a.tokenIndex.compareTo(b.tokenIndex));
