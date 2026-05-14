@@ -81,6 +81,8 @@ class ExpressionGenerator {
         return '($left ^ $right)';
       case BinaryOperator.xnor:
         return '~($left ^ $right)';
+      case BinaryOperator.nxor:
+        return '~($left ^ $right)';
       case BinaryOperator.equal:
         return '$left.eq($right)';
       case BinaryOperator.notEqual:
