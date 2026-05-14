@@ -116,7 +116,8 @@ class Utils {
     for (int i = 0; i < identifier.length; i++) {
       final char = identifier[i];
       if (i == 0) {
-        buffer.write(RegExp(r'[A-Z]').hasMatch(char) ? char.toLowerCase() : char);
+        buffer
+            .write(RegExp(r'[A-Z]').hasMatch(char) ? char.toLowerCase() : char);
         continue;
       }
 
