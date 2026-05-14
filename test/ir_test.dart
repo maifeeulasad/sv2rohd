@@ -4,18 +4,21 @@
 import 'package:test/test.dart';
 import 'package:sv2rohd/src/common/common.dart';
 import 'package:sv2rohd/src/ir/ir.dart';
+import 'package:sv2rohd/src/analysis/symbol.dart';
 
 void main() {
   group('IrNode', () {
     test('creates with location', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       // Test would use concrete implementations
     });
   });
 
   group('ModuleDeclaration', () {
     test('creates with basic properties', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final module = ModuleDeclaration(
         location: location,
         name: 'TestModule',
@@ -31,7 +34,8 @@ void main() {
     });
 
     test('contains children', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final port = PortDeclaration(
         location: location,
         name: 'clk',
@@ -50,7 +54,8 @@ void main() {
 
   group('PortDeclaration', () {
     test('creates with direction', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final port = PortDeclaration(
         location: location,
         name: 'data_in',
@@ -62,7 +67,8 @@ void main() {
     });
 
     test('creates with width', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final width = VectorWidth(
         msb: LiteralExpression(
           location: location,
@@ -91,7 +97,8 @@ void main() {
 
   group('SignalDeclaration', () {
     test('creates with signal type', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final signal = SignalDeclaration(
         location: location,
         name: 'my_wire',
@@ -103,7 +110,8 @@ void main() {
     });
 
     test('creates with reg type', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final signal = SignalDeclaration(
         location: location,
         name: 'my_reg',
@@ -116,7 +124,8 @@ void main() {
 
   group('Expression IR', () {
     test('BinaryExpression creates with operator', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final left = LiteralExpression(
         location: location,
         kind: LiteralKind.integer,
@@ -141,7 +150,8 @@ void main() {
     });
 
     test('UnaryExpression creates with operator', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final operand = IdentifierExpression(
         location: location,
         identifier: 'data',
@@ -158,7 +168,8 @@ void main() {
     });
 
     test('IdentifierExpression creates', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final id = IdentifierExpression(
         location: location,
         identifier: 'my_signal',
@@ -168,7 +179,8 @@ void main() {
     });
 
     test('LiteralExpression creates', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final literal = LiteralExpression(
         location: location,
         kind: LiteralKind.integer,
@@ -180,7 +192,8 @@ void main() {
     });
 
     test('ConditionalExpression creates', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final cond = LiteralExpression(
         location: location,
         kind: LiteralKind.integer,
@@ -212,7 +225,8 @@ void main() {
 
   group('Statement IR', () {
     test('AssignmentStatement creates with type', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final target = IdentifierExpression(
         location: location,
         identifier: 'out_sig',
@@ -236,7 +250,8 @@ void main() {
     });
 
     test('IfStatement creates with branches', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final cond = IdentifierExpression(
         location: location,
         identifier: 'enable',
@@ -257,7 +272,8 @@ void main() {
     });
 
     test('ForLoopStatement creates', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final body = EmptyStatement(location: location);
 
       final forLoop = ForLoopStatement(
@@ -272,7 +288,8 @@ void main() {
   group('IrPrinter', () {
     test('prints module declaration', () {
       final printer = IrPrinter();
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
 
       final module = ModuleDeclaration(
         location: location,
@@ -300,7 +317,8 @@ void main() {
     });
 
     test('detects packed array', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final location =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
       final packed = VectorWidth(
         msb: LiteralExpression(
           location: location,
