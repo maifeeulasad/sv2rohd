@@ -103,4 +103,3 @@ enum AssignmentType {
   continuous,
   procedural,
 }
-
