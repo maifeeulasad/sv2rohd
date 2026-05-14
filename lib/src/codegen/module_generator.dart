@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../ir/ir.dart';
+import '../analysis/symbol.dart';
 import 'expression_generator.dart';
 import 'signal_generator.dart';
 import 'naming_strategy.dart';
