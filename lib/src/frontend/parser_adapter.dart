@@ -63,7 +63,7 @@ class ParserErrorListener extends BaseErrorListener {
     int startIndex,
     int stopIndex,
     bool exact,
-    BitSet? ambigAlts,
+    dynamic ambigAlts,
     ATNConfigSet configs,
   ) {
     diagnostics.warning(
