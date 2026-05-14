@@ -3,11 +3,13 @@
 
 import 'package:test/test.dart';
 import 'package:sv2rohd/src/common/common.dart';
+import 'package:sv2rohd/src/common/naming_strategy.dart';
 
 void main() {
   group('SourceLocation', () {
     test('creates with correct values', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 10, column: 5, offset: 100);
+      final location = SourceLocation(
+          sourceName: 'test.sv', line: 10, column: 5, offset: 100);
       expect(location.sourceName, 'test.sv');
       expect(location.line, 10);
       expect(location.column, 5);
@@ -15,23 +17,28 @@ void main() {
     });
 
     test('formats correctly', () {
-      final location = SourceLocation(sourceName: 'test.sv', line: 10, column: 5, offset: 100);
+      final location = SourceLocation(
+          sourceName: 'test.sv', line: 10, column: 5, offset: 100);
       expect(location.formatted, 'test.sv:10:5');
     });
   });
 
   group('SourceRange', () {
     test('creates with start and end locations', () {
-      final start = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
-      final end = SourceLocation(sourceName: 'test.sv', line: 2, column: 1, offset: 50);
+      final start =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
+      final end =
+          SourceLocation(sourceName: 'test.sv', line: 2, column: 1, offset: 50);
       final range = SourceRange(start: start, end: end);
       expect(range.start, start);
       expect(range.end, end);
     });
 
     test('contains checks if offset is within range', () {
-      final start = SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 10);
-      final end = SourceLocation(sourceName: 'test.sv', line: 1, column: 10, offset: 50);
+      final start =
+          SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 10);
+      final end = SourceLocation(
+          sourceName: 'test.sv', line: 1, column: 10, offset: 50);
       final range = SourceRange(start: start, end: end);
       expect(range.containsOffset(30), true);
       expect(range.containsOffset(5), false);
@@ -40,16 +47,22 @@ void main() {
 
     test('overlaps checks if ranges intersect', () {
       final range1 = SourceRange(
-        start: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0),
-        end: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 50),
+        start: SourceLocation(
+            sourceName: 'test.sv', line: 1, column: 1, offset: 0),
+        end: SourceLocation(
+            sourceName: 'test.sv', line: 1, column: 1, offset: 50),
       );
       final range2 = SourceRange(
-        start: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 25),
-        end: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 75),
+        start: SourceLocation(
+            sourceName: 'test.sv', line: 1, column: 1, offset: 25),
+        end: SourceLocation(
+            sourceName: 'test.sv', line: 1, column: 1, offset: 75),
       );
       final range3 = SourceRange(
-        start: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 60),
-        end: SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 100),
+        start: SourceLocation(
+            sourceName: 'test.sv', line: 1, column: 1, offset: 60),
+        end: SourceLocation(
+            sourceName: 'test.sv', line: 1, column: 1, offset: 100),
       );
 
       expect(range1.overlaps(range2), true);
