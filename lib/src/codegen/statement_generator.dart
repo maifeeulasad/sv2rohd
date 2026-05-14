@@ -184,7 +184,8 @@ class StatementGenerator {
 
     final condition =
         stmt.condition != null ? exprGen.generate(stmt.condition!) : 'true';
-    final step = stmt.step != null ? _extractStep(stmt.step!) : '$varName + 1';
+    final step =
+        stmt.step != null ? _extractStep(varName, stmt.step!) : '$varName + 1';
 
     _writeLine(
         buffer, 'for (var $varName = $initialValue; $condition; $step) {');
@@ -194,7 +195,7 @@ class StatementGenerator {
     _writeLine(buffer, '}');
   }
 
-  String _extractStep(IrStatement step) {
+  String _extractStep(String varName, IrStatement step) {
     // Extract step expression from step statement
     // This handles the common case of `i = i + 1` or `i++`
     if (step is AssignmentStatement) {
@@ -205,8 +206,7 @@ class StatementGenerator {
   }
 
   void _generateWhileLoop(StringBuffer buffer, WhileLoopStatement stmt) {
-    final condition =
-        exprGen.generate(stmt.condition);
+    final condition = exprGen.generate(stmt.condition);
 
     _writeLine(buffer, 'while ($condition) {');
     _indent();
