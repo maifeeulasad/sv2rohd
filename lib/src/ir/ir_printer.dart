@@ -6,6 +6,7 @@ import 'expression_ir.dart';
 import 'statement_ir.dart';
 import 'module_ir.dart';
 import 'ir_visitor.dart';
+import '../analysis/symbol.dart';
 
 /// Prints the IR as a string representation.
 class IrPrinter extends DefaultIrVisitor<String> {
@@ -66,6 +67,8 @@ class IrPrinter extends DefaultIrVisitor<String> {
         return 'output';
       case PortDirection.inout:
         return 'inout';
+      default:
+        return 'unknown';
     }
   }
 
@@ -92,7 +95,7 @@ class IrPrinter extends DefaultIrVisitor<String> {
   @override
   String visitStatement(IrStatement node) {
     _writeLine('${_indentStr()}${node.nodeType}');
-    return super.visitStatement(node);
+    return '';
   }
 
   @override
@@ -169,7 +172,7 @@ class IrPrinter extends DefaultIrVisitor<String> {
   @override
   String visitExpression(IrExpression node) {
     _write('${_indentStr()}${node.nodeType}');
-    return super.visitExpression(node);
+    return '';
   }
 
   @override
