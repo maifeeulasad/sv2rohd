@@ -5,6 +5,14 @@ import '../analysis/symbol.dart';
 import 'ir_node.dart';
 import 'ir_visitor.dart';
 
+/// Generate block kinds.
+enum GenerateKind {
+  ifGenerate,
+  forGenerate,
+  caseGenerate,
+  loopGenerate,
+}
+
 /// Represents a module declaration in the IR.
 class ModuleDeclaration extends IrNode {
   final String name;
@@ -138,7 +146,7 @@ class AlwaysBlock extends IrNode {
   String get nodeType => 'AlwaysBlock';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => body.accept(visitor);
 }
 
 /// Represents an initial block.
@@ -157,7 +165,7 @@ class InitialBlock extends IrNode {
   String get nodeType => 'InitialBlock';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => body.accept(visitor);
 }
 
 /// Represents a continuous assignment.
@@ -180,7 +188,7 @@ class ContinuousAssignment extends IrNode {
   String get nodeType => 'ContinuousAssignment';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(target);
 }
 
 /// Represents a module instantiation.
@@ -226,18 +234,23 @@ class PortConnection extends IrNode {
   String get nodeType => 'PortConnection';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(this);
+  T accept<T>(IrVisitor<T> visitor) =>
+      value != null ? value!.accept(visitor) : (null as T);
 }
 
 /// Represents a generate block.
 class GenerateBlock extends IrNode {
   final String? label;
   final List<IrNode> items;
+  final GenerateKind kind;
+  final IrExpression? condition;
 
   GenerateBlock({
     required super.location,
     this.label,
     this.items = const [],
+    this.kind = GenerateKind.loopGenerate,
+    this.condition,
   });
 
   @override
@@ -264,7 +277,7 @@ class GenvarDeclaration extends IrDeclaration {
   String get nodeType => 'GenvarDeclaration';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => null as T;
 }
 
 /// Represents a for generate block.
@@ -290,7 +303,7 @@ class ForGenerateBlock extends IrNode {
   String get nodeType => 'ForGenerateBlock';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitGenerateBlock(body);
 }
 
 /// Represents an if generate block.
@@ -317,7 +330,7 @@ class IfGenerateBlock extends IrNode {
   String get nodeType => 'IfGenerateBlock';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitGenerateBlock(thenBranch);
 }
 
 /// Represents a case generate block.
@@ -338,7 +351,7 @@ class CaseGenerateBlock extends IrNode {
   String get nodeType => 'CaseGenerateBlock';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(expression);
 }
 
 /// Represents a case item in generate.
@@ -359,7 +372,7 @@ class GenerateCaseItem extends IrNode {
   String get nodeType => 'GenerateCaseItem';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitGenerateBlock(body);
 }
 
 /// Represents a function declaration.
@@ -378,17 +391,14 @@ class FunctionDeclaration extends IrNode {
   });
 
   @override
-  List<IrNode> get children => [
-        ...([returnType]),
-        ...ports,
-        ...items
-      ];
+  List<IrNode> get children =>
+      [if (returnType != null) returnType!, ...ports, ...items];
 
   @override
   String get nodeType => 'FunctionDeclaration';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => null as T;
 }
 
 /// Represents a function port.
@@ -411,7 +421,8 @@ class FunctionPort extends IrNode {
   String get nodeType => 'FunctionPort';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(this);
+  T accept<T>(IrVisitor<T> visitor) =>
+      type != null ? type!.accept(visitor) : (null as T);
 }
 
 /// Represents a task declaration.
@@ -434,7 +445,7 @@ class TaskDeclaration extends IrNode {
   String get nodeType => 'TaskDeclaration';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitStatement(this);
+  T accept<T>(IrVisitor<T> visitor) => null as T;
 }
 
 /// Represents a task port.
@@ -457,5 +468,6 @@ class TaskPort extends IrNode {
   String get nodeType => 'TaskPort';
 
   @override
-  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(this);
+  T accept<T>(IrVisitor<T> visitor) =>
+      type != null ? type!.accept(visitor) : (null as T);
 }
