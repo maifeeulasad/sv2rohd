@@ -33,7 +33,8 @@ class IrBuilder {
   }
 
   /// Converts a parse tree module to IR.
-  ModuleDeclaration _convertModuleDeclaration(dynamic ctx, ParsedModule parsed) {
+  ModuleDeclaration _convertModuleDeclaration(
+      dynamic ctx, ParsedModule parsed) {
     Module_declarationContext? moduleContext;
 
     if (ctx is Source_textContext) {
@@ -52,7 +53,8 @@ class IrBuilder {
       );
     }
 
-    final moduleName = moduleContext.module_identifier()?.text ?? 'unnamed_module';
+    final moduleName =
+        moduleContext.module_identifier()?.text ?? 'unnamed_module';
 
     final ports = <PortDeclaration>[];
     final portList = moduleContext.module_port_list();
@@ -72,7 +74,8 @@ class IrBuilder {
             output?.list_of_port_identifiers() ??
             inout?.list_of_port_identifiers();
 
-        if (listOfPortIdentifiers != null && listOfPortIdentifiers.IDENTIFIERs().isNotEmpty) {
+        if (listOfPortIdentifiers != null &&
+            listOfPortIdentifiers.IDENTIFIERs().isNotEmpty) {
           for (final identifier in listOfPortIdentifiers.IDENTIFIERs()) {
             portIdentifiers.add(identifier.text ?? 'unnamed_port');
           }
@@ -139,7 +142,12 @@ class IrBuilder {
 
     for (final match in signalRegex.allMatches(bodyText)) {
       final widthSpec = match.group(1)?.trim();
-      final names = match.group(2)?.split(',').map((name) => name.trim()).where((name) => name.isNotEmpty) ?? const [];
+      final names = match
+              .group(2)
+              ?.split(',')
+              .map((name) => name.trim())
+              .where((name) => name.isNotEmpty) ??
+          const [];
       final width = _parseWidth(widthSpec, parsed);
 
       for (final name in names) {
@@ -171,11 +179,15 @@ class IrBuilder {
   List<IrNode> _parseProceduralLogic(String bodyText, ParsedModule parsed) {
     final items = <IrNode>[];
 
-    if (bodyText.contains('always_ff') && bodyText.contains('sum') && bodyText.contains('ready')) {
+    if (bodyText.contains('always_ff') &&
+        bodyText.contains('sum') &&
+        bodyText.contains('ready')) {
       items.addAll(_parseAdderSequentialLogic(parsed));
     }
 
-    if (bodyText.contains('always_ff') && bodyText.contains('counter') && bodyText.contains('result_reg')) {
+    if (bodyText.contains('always_ff') &&
+        bodyText.contains('counter') &&
+        bodyText.contains('result_reg')) {
       items.addAll(_parseMultiplierSequentialLogic(parsed));
     }
 
@@ -295,20 +307,35 @@ class IrBuilder {
           statements: [
             AssignmentStatement(
               location: parsed.sourceText.getLocation(0),
-              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'counter'),
-              value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+              target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'counter'),
+              value: LiteralExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  kind: LiteralKind.integer,
+                  value: 0),
               type: AssignmentType.nonBlocking,
             ),
             AssignmentStatement(
               location: parsed.sourceText.getLocation(0),
-              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'partial'),
-              value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+              target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'partial'),
+              value: LiteralExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  kind: LiteralKind.integer,
+                  value: 0),
               type: AssignmentType.nonBlocking,
             ),
             AssignmentStatement(
               location: parsed.sourceText.getLocation(0),
-              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result_reg'),
-              value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+              target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'result_reg'),
+              value: LiteralExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  kind: LiteralKind.integer,
+                  value: 0),
               type: AssignmentType.nonBlocking,
             ),
           ],
@@ -320,8 +347,11 @@ class IrBuilder {
       ),
       AssignmentStatement(
         location: parsed.sourceText.getLocation(0),
-        target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'product'),
-        value: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result_reg'),
+        target: IdentifierExpression(
+            location: parsed.sourceText.getLocation(0), identifier: 'product'),
+        value: IdentifierExpression(
+            location: parsed.sourceText.getLocation(0),
+            identifier: 'result_reg'),
         type: AssignmentType.continuous,
       ),
     ];
@@ -338,14 +368,25 @@ class IrBuilder {
         items: [
           CaseItem(
             location: parsed.sourceText.getLocation(0),
-            values: [LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0)],
+            values: [
+              LiteralExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  kind: LiteralKind.integer,
+                  value: 0)
+            ],
             statement: AssignmentStatement(
               location: parsed.sourceText.getLocation(0),
-              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
+              target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'result'),
               value: BinaryExpression(
                 location: parsed.sourceText.getLocation(0),
-                left: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'a'),
-                right: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'b'),
+                left: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'a'),
+                right: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'b'),
                 operator: BinaryOperator.add,
               ),
               type: AssignmentType.blocking,
@@ -353,14 +394,25 @@ class IrBuilder {
           ),
           CaseItem(
             location: parsed.sourceText.getLocation(0),
-            values: [LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 1)],
+            values: [
+              LiteralExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  kind: LiteralKind.integer,
+                  value: 1)
+            ],
             statement: AssignmentStatement(
               location: parsed.sourceText.getLocation(0),
-              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
+              target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'result'),
               value: BinaryExpression(
                 location: parsed.sourceText.getLocation(0),
-                left: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'a'),
-                right: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'b'),
+                left: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'a'),
+                right: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'b'),
                 operator: BinaryOperator.subtract,
               ),
               type: AssignmentType.blocking,
@@ -368,14 +420,25 @@ class IrBuilder {
           ),
           CaseItem(
             location: parsed.sourceText.getLocation(0),
-            values: [LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 2)],
+            values: [
+              LiteralExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  kind: LiteralKind.integer,
+                  value: 2)
+            ],
             statement: AssignmentStatement(
               location: parsed.sourceText.getLocation(0),
-              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
+              target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'result'),
               value: BinaryExpression(
                 location: parsed.sourceText.getLocation(0),
-                left: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'a'),
-                right: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'b'),
+                left: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'a'),
+                right: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'b'),
                 operator: BinaryOperator.and,
               ),
               type: AssignmentType.blocking,
@@ -384,8 +447,12 @@ class IrBuilder {
         ],
         defaultCase: AssignmentStatement(
           location: parsed.sourceText.getLocation(0),
-          target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
-          value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+          target: IdentifierExpression(
+              location: parsed.sourceText.getLocation(0), identifier: 'result'),
+          value: LiteralExpression(
+              location: parsed.sourceText.getLocation(0),
+              kind: LiteralKind.integer,
+              value: 0),
           type: AssignmentType.blocking,
         ),
       ),
@@ -395,8 +462,12 @@ class IrBuilder {
       ),
       AssignmentStatement(
         location: parsed.sourceText.getLocation(0),
-        target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'overflow'),
-        value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+        target: IdentifierExpression(
+            location: parsed.sourceText.getLocation(0), identifier: 'overflow'),
+        value: LiteralExpression(
+            location: parsed.sourceText.getLocation(0),
+            kind: LiteralKind.integer,
+            value: 0),
         type: AssignmentType.continuous,
       ),
     ];
@@ -493,14 +564,18 @@ class RohdTranslator extends DefaultIrVisitor<String> {
 
   RohdTranslator({NamingStrategy? namingStrategy})
       : namingStrategy = namingStrategy ?? NamingStrategy(),
-        _expressionGenerator = ExpressionGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
+        _expressionGenerator = ExpressionGenerator(
+            namingStrategy: namingStrategy ?? NamingStrategy()),
         _statementGenerator = StatementGenerator(
-          exprGen: ExpressionGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
+          exprGen: ExpressionGenerator(
+              namingStrategy: namingStrategy ?? NamingStrategy()),
           namingStrategy: namingStrategy ?? NamingStrategy(),
         ),
         _generateBlockGenerator = GenerateBlockGenerator(
-          exprGen: ExpressionGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
-          signalGen: SignalGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
+          exprGen: ExpressionGenerator(
+              namingStrategy: namingStrategy ?? NamingStrategy()),
+          signalGen: SignalGenerator(
+              namingStrategy: namingStrategy ?? NamingStrategy()),
           namingStrategy: namingStrategy ?? NamingStrategy(),
         );
 
@@ -576,7 +651,8 @@ class RohdTranslator extends DefaultIrVisitor<String> {
     if (width == null || width == 1) {
       _writeLine('Logic $signalName;');
     } else {
-      _writeLine('Logic $signalName = Logic(name: \'${node.name}\', width: $width);');
+      _writeLine(
+          'Logic $signalName = Logic(name: \'${node.name}\', width: $width);');
     }
     return '';
   }
