@@ -1,7 +1,10 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
+import 'dart:io';
+
 import 'package:args/args.dart';
+import 'package:path/path.dart' as p;
 import 'common/common.dart';
 import 'codegen/naming_strategy.dart';
 import 'frontend/frontend.dart';
@@ -56,19 +59,25 @@ class SV2ROHD {
   bool get hasErrors => diagnostics.hasErrors;
 
   String _readFile(String path) {
-    // Implementation would use dart:io
-    throw UnimplementedError('File reading not yet implemented');
+    final file = File(path);
+    if (!file.existsSync()) {
+      throw FileSystemException('File not found', path);
+    }
+    return file.readAsStringSync();
   }
 
   void _writeFile(String path, String content) {
-    // Implementation would use dart:io
-    throw UnimplementedError('File writing not yet implemented');
+    final file = File(path);
+    final parent = file.parent;
+    if (!parent.existsSync()) parent.createSync(recursive: true);
+    file.writeAsStringSync(content);
   }
 }
 
 /// Main CLI entry point.
 void main(List<String> arguments) {
   final parser = ArgParser()
+    ..addOption('input', abbr: 'i', help: 'Input SystemVerilog file')
     ..addOption('output', abbr: 'o', help: 'Output file path')
     ..addMultiOption('include', abbr: 'I', help: 'Include search path')
     ..addFlag('verbose', abbr: 'v', help: 'Verbose output')
@@ -92,18 +101,33 @@ Options:
       return;
     }
 
-    if (results.rest.isEmpty) {
+    String? inputPath;
+    if ((results['input'] as String?) != null) {
+      inputPath = results['input'] as String?;
+    } else if (results.rest.isNotEmpty) {
+      inputPath = results.rest.first;
+    }
+
+    if (inputPath == null) {
       print('Error: No input file specified');
       print('Use --help for usage information');
       return;
     }
-
-    final inputPath = results.rest.first;
-    final outputPath = results['output'] as String?;
+    String? outputPath = results['output'] as String?;
     final includePaths = (results['include'] as List<String>?) ?? [];
 
     if (results['verbose'] == true) {
       print('Converting $inputPath...');
+    }
+
+    // If outputPath is an existing directory or ends with a separator,
+    // write output to a file inside that directory using the input basename.
+    if (outputPath != null) {
+      final outDir = Directory(outputPath);
+      if (outDir.existsSync() || outputPath.endsWith(p.separator) || outputPath.endsWith('/')) {
+        final base = p.basenameWithoutExtension(inputPath);
+        outputPath = p.join(outputPath, '$base.dart');
+      }
     }
 
     final converter = SV2ROHD();
