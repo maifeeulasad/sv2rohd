@@ -406,7 +406,7 @@ void main() {
 
       final info = exprAnalyzer.analyze(expr);
       expect(info.isConstant, false);
-      expect(info.referencedSignals, contains('signal_a')); 
+      expect(info.referencedSignals, contains('signal_a'));
     });
 
     test('evaluates parameter references when provided', () {
