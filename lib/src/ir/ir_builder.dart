@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../common/common.dart';
+import '../analysis/symbol.dart';
 import '../frontend/frontend.dart';
 import '../codegen/naming_strategy.dart';
+import 'package:sv2rohd/generated/grammar/SystemVerilogParser.dart';
 import 'ir_node.dart';
 import 'expression_ir.dart';
 import 'statement_ir.dart';
@@ -23,17 +25,76 @@ class IrBuilder {
   /// Converts a parsed module to IR.
   ModuleDeclaration buildModule(ParsedModule parsed) {
     final context = parsed.compilationUnit;
-    return _convertModuleDeclaration(context);
+    return _convertModuleDeclaration(context, parsed);
   }
 
   /// Converts a parse tree module to IR.
-  ModuleDeclaration _convertModuleDeclaration(dynamic ctx) {
-    // Implementation would traverse the parse tree
-    // For now, create a placeholder
+  ModuleDeclaration _convertModuleDeclaration(dynamic ctx, ParsedModule parsed) {
+    Module_declarationContext? moduleContext;
+
+    if (ctx is Source_textContext) {
+      final descriptions = ctx.descriptions();
+      if (descriptions.isNotEmpty) {
+        moduleContext = descriptions.first.module_declaration();
+      }
+    } else if (ctx is Module_declarationContext) {
+      moduleContext = ctx;
+    }
+
+    if (moduleContext == null) {
+      return ModuleDeclaration(
+        location: parsed.sourceText.getLocation(0),
+        name: 'unnamed_module',
+      );
+    }
+
+    final moduleName = moduleContext.module_identifier()?.text ?? 'unnamed_module';
+
+    final ports = <PortDeclaration>[];
+    final portList = moduleContext.module_port_list();
+    if (portList != null) {
+      for (final port in portList.ports()) {
+        final direction = port.input_declaration() != null
+            ? PortDirection.input
+            : port.output_declaration() != null
+                ? PortDirection.output
+                : PortDirection.inout;
+
+        final portIdentifiers = <String>[];
+        final input = port.input_declaration();
+        final output = port.output_declaration();
+        final inout = port.inout_declaration();
+        final listOfPortIdentifiers = input?.list_of_port_identifiers() ??
+            output?.list_of_port_identifiers() ??
+            inout?.list_of_port_identifiers();
+
+        if (listOfPortIdentifiers != null && listOfPortIdentifiers.IDENTIFIERs().isNotEmpty) {
+          for (final identifier in listOfPortIdentifiers.IDENTIFIERs()) {
+            portIdentifiers.add(identifier.text ?? 'unnamed_port');
+          }
+        } else {
+          final portIdentifier = port.port_identifier();
+          if (portIdentifier != null) {
+            portIdentifiers.add(portIdentifier.text ?? 'unnamed_port');
+          }
+        }
+
+        for (final portName in portIdentifiers) {
+          ports.add(
+            PortDeclaration(
+              location: parsed.sourceText.getLocation(0),
+              name: portName,
+              direction: direction,
+            ),
+          );
+        }
+      }
+    }
+
     return ModuleDeclaration(
-      location:
-          SourceLocation(sourceName: 'unknown', line: 0, column: 0, offset: 0),
-      name: 'unnamed_module',
+      location: parsed.sourceText.getLocation(0),
+      name: moduleName,
+      ports: ports,
     );
   }
 
