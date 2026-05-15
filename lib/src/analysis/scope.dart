@@ -45,6 +45,7 @@ class SymbolTable {
 
   void define(String name, Symbol symbol) {
     _symbols.putIfAbsent(name, () => []).add(symbol);
+    currentScope?.define(name, symbol);
   }
 
   List<Symbol>? lookup(String name) => _symbols[name];
@@ -64,18 +65,16 @@ class SymbolTable {
   Scope? get currentScope => _scopeStack.isNotEmpty ? _scopeStack.last : null;
 
   List<Symbol> lookupRecursive(String name) {
-    // Look in current scope
-    final symbols = _symbols[name];
-    if (symbols != null && symbols.isNotEmpty) {
-      return symbols;
-    }
-
-    // Look in parent scopes
     for (final scope in _scopeStack.reversed) {
       final parentSymbols = scope.symbols[name];
       if (parentSymbols != null && parentSymbols.isNotEmpty) {
         return parentSymbols;
       }
+    }
+
+    final symbols = _symbols[name];
+    if (symbols != null && symbols.isNotEmpty) {
+      return symbols;
     }
 
     return [];
