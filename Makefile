@@ -196,6 +196,7 @@ outdated: ## Check for outdated dependencies
 
 run-fixtures: ## Run sv2rohd on example SystemVerilog files
 	@echo "Running sv2rohd on fixture files..."
+	@rm -rf output/*.dart
 	@dart run sv2rohd -i fixtures/sv_samples/adder.sv -o output && dart run sv2rohd -i fixtures/sv_samples/alu.sv -o output && dart run sv2rohd -i fixtures/sv_samples/multiplier.sv -o output
 	@echo "✓ sv2rohd run on fixture files complete"
 	
