@@ -4,7 +4,6 @@
 import 'package:antlr4/antlr4.dart';
 
 import '../common/common.dart';
-import 'source_text.dart';
 
 /// Adapts the ANTLR4 lexer for SystemVerilog.
 class LexerAdapter {
