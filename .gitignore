@@ -33,3 +33,6 @@ coverage/
 
 # Generated output
 output/
+
+# Helper tools
+helper/
