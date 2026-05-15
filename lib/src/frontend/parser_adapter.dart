@@ -2,28 +2,60 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import 'package:antlr4/antlr4.dart';
+import 'package:sv2rohd/generated/grammar/SystemVerilogLexer.dart';
+import 'package:sv2rohd/generated/grammar/SystemVerilogParser.dart';
+
 import '../common/common.dart';
+import 'lexer_adapter.dart';
 
 /// Adapts the ANTLR4 parser for SystemVerilog.
 class ParserAdapter {
   final String sourceName;
+  final String sourceText;
   final List<Token> tokens;
   final DiagnosticCollector diagnostics;
 
   ParserAdapter({
     required this.sourceName,
+    required this.sourceText,
     required this.tokens,
     required this.diagnostics,
   });
 
   /// Parses the source and returns the parse tree.
-  dynamic parse() => null;
+  Source_textContext? parse() {
+    final tokenSource = ListTokenSource(tokens, sourceName)..i = 0;
+    final tokenStream = CommonTokenStream(tokenSource);
+    final parser = SystemVerilogParser(tokenStream);
+    parser.removeErrorListeners();
+    parser.addErrorListener(ParserErrorListener(diagnostics));
+    return parser.source_text();
+  }
 
   /// Parses a module declaration.
-  dynamic parseModule() => null;
+  Module_declarationContext? parseModule() {
+    final tree = parse();
+    if (tree == null) return null;
+    if (tree.descriptions().isNotEmpty) {
+      final description = tree.description(0);
+      return description?.module_declaration();
+    }
+    return null;
+  }
 
   /// Parses an expression.
-  dynamic parseExpression(String expression) => null;
+  dynamic parseExpression(String expression) {
+    final input = InputStream.fromString(expression);
+    final lexer = SystemVerilogLexer(input);
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(LexerErrorListener(diagnostics));
+
+    final stream = CommonTokenStream(lexer);
+    final parser = SystemVerilogParser(stream);
+    parser.removeErrorListeners();
+    parser.addErrorListener(ParserErrorListener(diagnostics));
+    return parser.expression(0);
+  }
 }
 
 /// Error listener for parser errors.
