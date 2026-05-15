@@ -150,7 +150,8 @@ class SemanticAnalyzer {
           code: 'SEM001',
         ));
       } else {
-        _validateAssignmentCompatibility(assign.target, assign.value, assign.location);
+        _validateAssignmentCompatibility(
+            assign.target, assign.value, assign.location);
       }
     }
 
@@ -212,7 +213,8 @@ class SemanticAnalyzer {
           code: 'SEM002',
         ));
       } else {
-        _validateAssignmentCompatibility(assign.target, assign.value, assign.location,
+        _validateAssignmentCompatibility(
+            assign.target, assign.value, assign.location,
             warningCode: 'SEM004');
       }
     }
@@ -363,21 +365,27 @@ class SemanticAnalyzer {
     final types = <String, TypeInfo>{};
     for (final symbol in symbolTable.getAllSymbols()) {
       if (symbol.width != null) {
-        final type = symbol.kind == SymbolKind.port && symbol.portDirection == PortDirection.inout
+        final type = symbol.kind == SymbolKind.port &&
+                symbol.portDirection == PortDirection.inout
             ? TypeInfo.logic(symbol.width!)
             : TypeInfo.logic(symbol.width!);
         types[symbol.name] = type;
-      } else if (symbol.kind == SymbolKind.parameter && symbol.defaultValue is LiteralExpression) {
+      } else if (symbol.kind == SymbolKind.parameter &&
+          symbol.defaultValue is LiteralExpression) {
         final literal = symbol.defaultValue as LiteralExpression;
         if (literal.value is int) {
-          types[symbol.name] = TypeInfo.logic((literal.value as int).abs().bitLength == 0 ? 1 : (literal.value as int).abs().bitLength);
+          types[symbol.name] = TypeInfo.logic(
+              (literal.value as int).abs().bitLength == 0
+                  ? 1
+                  : (literal.value as int).abs().bitLength);
         }
       }
     }
     return types;
   }
 
-  void _reportDuplicateDefinition(String name, SourceLocation location, String kind) {
+  void _reportDuplicateDefinition(
+      String name, SourceLocation location, String kind) {
     final existing = symbolTable.currentScope?.lookup(name);
     if (existing != null && existing.isNotEmpty) {
       errors.add(AnalysisError(
