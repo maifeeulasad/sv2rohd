@@ -85,6 +85,39 @@ SIGNED : 'signed' ;
 UNSIGNED : 'unsigned' ;
 SUPER : 'super' ;
 THIS : 'this' ;
+TIMEUNIT : 'timeunit' ;
+NULL : 'null' ;
+FOREACH : 'foreach' ;
+POSEDGE : 'posedge' ;
+NEGEDGE : 'negedge' ;
+REF : 'ref' ;
+ATTR_LPAREN : '(*' ;
+ATTR_RPAREN : '*)' ;
+PLUS_PLUS : '++' ;
+MINUS_MINUS : '--' ;
+TRI : 'tri' ;
+TRI0 : 'tri0' ;
+TRI1 : 'tri1' ;
+TRIAND : 'triand' ;
+TRIOR : 'trior' ;
+TRIREG : 'trireg' ;
+SUPPLY0 : 'supply0' ;
+SUPPLY1 : 'supply1' ;
+SMALL : 'small' ;
+MEDIUM : 'medium' ;
+LARGE : 'large' ;
+STRONG0 : 'strong0' ;
+STRONG1 : 'strong1' ;
+PULL0 : 'pull0' ;
+PULL1 : 'pull1' ;
+PULLUP : 'pullup' ;
+PULLDOWN : 'pulldown' ;
+WEAK0 : 'weak0' ;
+WEAK1 : 'weak1' ;
+HIGHZ0 : 'highz0' ;
+HIGHZ1 : 'highz1' ;
+VECTORED : 'vectored' ;
+SCALARED : 'scalared' ;
 STATIC : 'static' ;
 AUTOMATIC : 'automatic' ;
 
@@ -172,6 +205,8 @@ MODEQ : '%=' ;
 ANDEQ : '&=' ;
 OREQ : '|=' ;
 XOREQ : '^=' ;
+NAND : '~&' ;
+NOR : '~|' ;
 SLEFT : '<<' ;
 SRIGHT : '>>' ;
 SLEFT_ARITH : '<<<' ;
@@ -201,7 +236,7 @@ INTEGER_LITERAL : DECIMAL_INTEGER | BASED_INTEGER ;
 fragment DECIMAL_INTEGER : [0-9]+ ('_' [0-9]+)* ;
 fragment BASED_INTEGER :
     (BINARY_DIGIT | OCTAL_DIGIT | HEX_DIGIT) ('_'? (BINARY_DIGIT | OCTAL_DIGIT | HEX_DIGIT | [xXzZ]))*
-    (\'' [bBoOxXzZ]) ;
+  ('\'' [bBoOxXzZ]) ;
 
 // Real literals
 REAL_LITERAL :
