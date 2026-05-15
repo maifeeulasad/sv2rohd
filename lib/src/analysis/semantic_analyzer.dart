@@ -4,6 +4,7 @@
 import '../common/common.dart';
 import 'symbol.dart';
 import 'scope.dart';
+import 'type_analyzer.dart';
 import '../ir/ir.dart';
 
 /// Semantic analyzer for SystemVerilog.
@@ -58,6 +59,7 @@ class SemanticAnalyzer {
   }
 
   void _analyzePort(PortDeclaration port) {
+    _reportDuplicateDefinition(port.name, port.location, 'port');
     final portSymbol = Symbol(
       name: port.name,
       kind: SymbolKind.port,
@@ -70,6 +72,7 @@ class SemanticAnalyzer {
   }
 
   void _analyzeParameter(ParameterDeclaration param) {
+    _reportDuplicateDefinition(param.name, param.location, 'parameter');
     final paramSymbol = Symbol(
       name: param.name,
       kind: SymbolKind.parameter,
@@ -97,6 +100,7 @@ class SemanticAnalyzer {
   }
 
   void _analyzeSignal(SignalDeclaration signal) {
+    _reportDuplicateDefinition(signal.name, signal.location, 'signal');
     final signalSymbol = Symbol(
       name: signal.name,
       kind: SymbolKind.signal,
@@ -145,6 +149,8 @@ class SemanticAnalyzer {
           location: assign.location.toRange(),
           code: 'SEM001',
         ));
+      } else {
+        _validateAssignmentCompatibility(assign.target, assign.value, assign.location);
       }
     }
 
@@ -205,6 +211,9 @@ class SemanticAnalyzer {
           location: assign.location.toRange(),
           code: 'SEM002',
         ));
+      } else {
+        _validateAssignmentCompatibility(assign.target, assign.value, assign.location,
+            warningCode: 'SEM004');
       }
     }
     _analyzeExpression(assign.value);
@@ -230,6 +239,7 @@ class SemanticAnalyzer {
   }
 
   void _analyzeFunction(FunctionDeclaration func) {
+    _reportDuplicateDefinition(func.name, func.location, 'function');
     symbolTable.pushScope(func.name, ScopeKind.function);
 
     for (final port in func.ports) {
@@ -255,6 +265,7 @@ class SemanticAnalyzer {
   }
 
   void _analyzeTask(TaskDeclaration task) {
+    _reportDuplicateDefinition(task.name, task.location, 'task');
     symbolTable.pushScope(task.name, ScopeKind.task);
 
     for (final port in task.ports) {
@@ -280,7 +291,9 @@ class SemanticAnalyzer {
   }
 
   void _analyzeExpression(IrExpression expr) {
-    if (expr is IdentifierExpression) {
+    if (expr is LiteralExpression) {
+      return;
+    } else if (expr is IdentifierExpression) {
       final symbols = symbolTable.lookupRecursive(expr.identifier);
       if (symbols.isEmpty) {
         errors.add(AnalysisError(
@@ -302,6 +315,76 @@ class SemanticAnalyzer {
       for (final arg in expr.arguments) {
         _analyzeExpression(arg);
       }
+      final symbols = symbolTable.lookupRecursive(expr.functionName);
+      if (symbols.isEmpty && !expr.functionName.startsWith(r'$')) {
+        warnings.add(AnalysisWarning(
+          message: 'Undefined function: ${expr.functionName}',
+          location: expr.location.toRange(),
+          code: 'SEM005',
+        ));
+      }
+    } else if (expr is ConcatenationExpression) {
+      for (final subExpr in expr.expressions) {
+        _analyzeExpression(subExpr);
+      }
+    } else if (expr is PartSelectExpression) {
+      _analyzeExpression(expr.base);
+      _analyzeExpression(expr.msb);
+      _analyzeExpression(expr.lsb);
+    } else {
+      warnings.add(AnalysisWarning(
+        message: 'Unhandled expression type: ${expr.runtimeType}',
+        location: expr.location.toRange(),
+        code: 'SEM099',
+      ));
+    }
+  }
+
+  void _validateAssignmentCompatibility(
+    IrExpression target,
+    IrExpression value,
+    SourceLocation location, {
+    String warningCode = 'SEM006',
+  }) {
+    final typeAnalyzer = TypeAnalyzer(
+      diagnostics: diagnostics,
+      symbolTypes: _buildTypeMap(),
+    );
+    if (!typeAnalyzer.checkAssignment(target, value)) {
+      warnings.add(AnalysisWarning(
+        message: 'Potential assignment width mismatch',
+        location: location.toRange(),
+        code: warningCode,
+      ));
+    }
+  }
+
+  Map<String, TypeInfo> _buildTypeMap() {
+    final types = <String, TypeInfo>{};
+    for (final symbol in symbolTable.getAllSymbols()) {
+      if (symbol.width != null) {
+        final type = symbol.kind == SymbolKind.port && symbol.portDirection == PortDirection.inout
+            ? TypeInfo.logic(symbol.width!)
+            : TypeInfo.logic(symbol.width!);
+        types[symbol.name] = type;
+      } else if (symbol.kind == SymbolKind.parameter && symbol.defaultValue is LiteralExpression) {
+        final literal = symbol.defaultValue as LiteralExpression;
+        if (literal.value is int) {
+          types[symbol.name] = TypeInfo.logic((literal.value as int).abs().bitLength == 0 ? 1 : (literal.value as int).abs().bitLength);
+        }
+      }
+    }
+    return types;
+  }
+
+  void _reportDuplicateDefinition(String name, SourceLocation location, String kind) {
+    final existing = symbolTable.currentScope?.lookup(name);
+    if (existing != null && existing.isNotEmpty) {
+      errors.add(AnalysisError(
+        message: 'Duplicate $kind declaration: $name',
+        location: location.toRange(),
+        code: 'SEM004',
+      ));
     }
   }
 
