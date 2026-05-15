@@ -471,3 +471,24 @@ class TaskPort extends IrNode {
   T accept<T>(IrVisitor<T> visitor) =>
       type != null ? type!.accept(visitor) : (null as T);
 }
+
+/// Represents a raw code snippet emitted by the frontend when a construct is
+/// not yet modeled as a dedicated IR node.
+/// todo: recheck @maifeeulasad
+class RawCodeItem extends IrNode {
+  final String code;
+
+  RawCodeItem({
+    required super.location,
+    required this.code,
+  });
+
+  @override
+  List<IrNode> get children => [];
+
+  @override
+  String get nodeType => 'RawCodeItem';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitRawCode(this);
+}
