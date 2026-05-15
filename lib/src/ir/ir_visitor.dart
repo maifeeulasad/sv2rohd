@@ -25,6 +25,7 @@ abstract class IrVisitor<T> {
   T visitWhileLoop(WhileLoopStatement node);
   T visitModuleInstantiation(ModuleInstantiation node);
   T visitGenerateBlock(GenerateBlock node);
+  T visitRawCode(RawCodeItem node);
 }
 
 /// Default visitor that traverses the IR without modification.
@@ -135,4 +136,7 @@ class DefaultIrVisitor<T> implements IrVisitor<T?> {
     }
     return null;
   }
+
+  @override
+  T? visitRawCode(RawCodeItem node) => null;
 }
