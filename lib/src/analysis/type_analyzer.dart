@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import '../common/common.dart';
-import 'symbol.dart';
-import 'semantic_analyzer.dart';
 import '../ir/ir.dart';
 
 /// Type information for expressions and signals.
