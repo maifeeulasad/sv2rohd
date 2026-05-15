@@ -82,7 +82,7 @@ class IrBuilder {
         } else {
           final portIdentifier = port.port_identifier();
           if (portIdentifier != null) {
-            portIdentifiers.add(portIdentifier.text ?? 'unnamed_port');
+            portIdentifiers.add(portIdentifier.text);
           }
         }
 
@@ -589,7 +589,7 @@ class RohdTranslator extends DefaultIrVisitor<String> {
   }
 
   void _writeLine([String text = '']) {
-    _buffer.writeln(text);
+    _buffer.writeln('${'  ' * _indentLevel}$text');
   }
 
   void _indent() {
@@ -598,10 +598,6 @@ class RohdTranslator extends DefaultIrVisitor<String> {
 
   void _dedent() {
     _indentLevel--;
-  }
-
-  String _indentStr() {
-    return '  ' * _indentLevel;
   }
 
   @override
@@ -669,11 +665,9 @@ class RohdTranslator extends DefaultIrVisitor<String> {
 
   @override
   String visitAssignment(AssignmentStatement node) {
-    _write('  ');
-    node.target.accept(this);
-    _write(' = ');
-    node.value.accept(this);
-    _writeLine(';');
+    final target = _expressionGenerator.generate(node.target);
+    final value = _expressionGenerator.generate(node.value);
+    _writeLine('  $target = $value;');
     return '';
   }
 
