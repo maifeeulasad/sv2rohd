@@ -1,6 +1,8 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
+import 'dart:io';
+
 import 'package:antlr4/antlr4.dart';
 import '../common/common.dart';
 import 'source_text.dart';
@@ -53,6 +55,7 @@ class Frontend {
     // Parse
     final parser = ParserAdapter(
       sourceName: sourceName ?? 'unknown',
+      sourceText: preprocessed.text,
       tokens: tokens,
       diagnostics: diagnostics,
     );
@@ -67,8 +70,11 @@ class Frontend {
 
   /// Reads a file from the filesystem.
   String _readFile(String path) {
-    // This would use dart:io for actual file reading
-    throw UnimplementedError('File reading not yet implemented');
+    final file = File(path);
+    if (!file.existsSync()) {
+      throw FileSystemException('File not found', path);
+    }
+    return file.readAsStringSync();
   }
 }
 
