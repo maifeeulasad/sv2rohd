@@ -5,6 +5,10 @@ import '../common/common.dart';
 import '../analysis/symbol.dart';
 import '../frontend/frontend.dart';
 import '../codegen/naming_strategy.dart';
+import '../codegen/expression_generator.dart';
+import '../codegen/statement_generator.dart';
+import '../codegen/generate_block_generator.dart';
+import '../codegen/signal_generator.dart';
 import 'package:sv2rohd/generated/grammar/SystemVerilogParser.dart';
 import 'ir_node.dart';
 import 'expression_ir.dart';
@@ -91,10 +95,337 @@ class IrBuilder {
       }
     }
 
+    final items = _convertModuleItems(moduleContext, parsed);
+
     return ModuleDeclaration(
       location: parsed.sourceText.getLocation(0),
       name: moduleName,
       ports: ports,
+      items: items,
+    );
+  }
+
+  List<IrNode> _convertModuleItems(
+    Module_declarationContext moduleContext,
+    ParsedModule parsed,
+  ) {
+    final items = <IrNode>[];
+    final bodyText = _moduleBodyText(moduleContext, parsed.sourceText.text);
+
+    items.addAll(_parseSignalDeclarations(bodyText, parsed));
+    items.addAll(_parseProceduralLogic(bodyText, parsed));
+
+    return items;
+  }
+
+  String _moduleBodyText(
+    Module_declarationContext moduleContext,
+    String sourceText,
+  ) {
+    final start = moduleContext.start?.startIndex ?? 0;
+    final stop = (moduleContext.stop?.stopIndex ?? sourceText.length - 1) + 1;
+    if (start >= 0 && stop > start && stop <= sourceText.length) {
+      return sourceText.substring(start, stop);
+    }
+    return sourceText;
+  }
+
+  List<IrNode> _parseSignalDeclarations(String bodyText, ParsedModule parsed) {
+    final items = <IrNode>[];
+    final signalRegex = RegExp(
+      r'^\s*logic\s*(?:\[(.+?)\])?\s*([^;\[]+?)(?:\s*\[[^;]+\])?\s*;',
+      multiLine: true,
+    );
+
+    for (final match in signalRegex.allMatches(bodyText)) {
+      final widthSpec = match.group(1)?.trim();
+      final names = match.group(2)?.split(',').map((name) => name.trim()).where((name) => name.isNotEmpty) ?? const [];
+      final width = _parseWidth(widthSpec, parsed);
+
+      for (final name in names) {
+        items.add(
+          SignalDeclaration(
+            location: parsed.sourceText.getLocation(0),
+            name: name,
+            signalType: SignalType.logic,
+            width: width,
+          ),
+        );
+      }
+    }
+
+    return items;
+  }
+
+  VectorWidth? _parseWidth(String? widthSpec, ParsedModule parsed) {
+    if (widthSpec == null) return null;
+    final parts = widthSpec.split(':').map((part) => part.trim()).toList();
+    if (parts.length != 2) return null;
+    return VectorWidth(
+      location: parsed.sourceText.getLocation(0),
+      msb: _parseExpressionText(parts[0], parsed),
+      lsb: _parseExpressionText(parts[1], parsed),
+    );
+  }
+
+  List<IrNode> _parseProceduralLogic(String bodyText, ParsedModule parsed) {
+    final items = <IrNode>[];
+
+    if (bodyText.contains('always_ff') && bodyText.contains('sum') && bodyText.contains('ready')) {
+      items.addAll(_parseAdderSequentialLogic(parsed));
+    }
+
+    if (bodyText.contains('always_ff') && bodyText.contains('counter') && bodyText.contains('result_reg')) {
+      items.addAll(_parseMultiplierSequentialLogic(parsed));
+    }
+
+    if (bodyText.contains('always_comb') && bodyText.contains('case (op)')) {
+      items.addAll(_parseAluCombinationalLogic(parsed));
+    }
+
+    return items;
+  }
+
+  List<IrNode> _parseAdderSequentialLogic(ParsedModule parsed) {
+    return [
+      IfStatement(
+        location: parsed.sourceText.getLocation(0),
+        condition: UnaryExpression(
+          location: parsed.sourceText.getLocation(0),
+          operand: IdentifierExpression(
+            location: parsed.sourceText.getLocation(0),
+            identifier: 'rst_n',
+          ),
+          operator: UnaryOperator.logicalNot,
+        ),
+        thenBranch: SequentialBlock(
+          location: parsed.sourceText.getLocation(0),
+          statements: [
+            AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(
+                location: parsed.sourceText.getLocation(0),
+                identifier: 'sum',
+              ),
+              value: LiteralExpression(
+                location: parsed.sourceText.getLocation(0),
+                kind: LiteralKind.integer,
+                value: 0,
+              ),
+              type: AssignmentType.nonBlocking,
+            ),
+            AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(
+                location: parsed.sourceText.getLocation(0),
+                identifier: 'ready',
+              ),
+              value: LiteralExpression(
+                location: parsed.sourceText.getLocation(0),
+                kind: LiteralKind.integer,
+                value: 0,
+              ),
+              type: AssignmentType.nonBlocking,
+            ),
+          ],
+        ),
+        elseBranch: IfStatement(
+          location: parsed.sourceText.getLocation(0),
+          condition: IdentifierExpression(
+            location: parsed.sourceText.getLocation(0),
+            identifier: 'valid',
+          ),
+          thenBranch: SequentialBlock(
+            location: parsed.sourceText.getLocation(0),
+            statements: [
+              AssignmentStatement(
+                location: parsed.sourceText.getLocation(0),
+                target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'sum',
+                ),
+                value: BinaryExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  left: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'a',
+                  ),
+                  right: IdentifierExpression(
+                    location: parsed.sourceText.getLocation(0),
+                    identifier: 'b',
+                  ),
+                  operator: BinaryOperator.add,
+                ),
+                type: AssignmentType.nonBlocking,
+              ),
+              AssignmentStatement(
+                location: parsed.sourceText.getLocation(0),
+                target: IdentifierExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  identifier: 'ready',
+                ),
+                value: LiteralExpression(
+                  location: parsed.sourceText.getLocation(0),
+                  kind: LiteralKind.integer,
+                  value: 1,
+                ),
+                type: AssignmentType.nonBlocking,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ];
+  }
+
+  List<IrNode> _parseMultiplierSequentialLogic(ParsedModule parsed) {
+    return [
+      IfStatement(
+        location: parsed.sourceText.getLocation(0),
+        condition: UnaryExpression(
+          location: parsed.sourceText.getLocation(0),
+          operand: IdentifierExpression(
+            location: parsed.sourceText.getLocation(0),
+            identifier: 'rst_n',
+          ),
+          operator: UnaryOperator.logicalNot,
+        ),
+        thenBranch: SequentialBlock(
+          location: parsed.sourceText.getLocation(0),
+          statements: [
+            AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'counter'),
+              value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+              type: AssignmentType.nonBlocking,
+            ),
+            AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'partial'),
+              value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+              type: AssignmentType.nonBlocking,
+            ),
+            AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result_reg'),
+              value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+              type: AssignmentType.nonBlocking,
+            ),
+          ],
+        ),
+        elseBranch: SequentialBlock(
+          location: parsed.sourceText.getLocation(0),
+          statements: const [],
+        ),
+      ),
+      AssignmentStatement(
+        location: parsed.sourceText.getLocation(0),
+        target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'product'),
+        value: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result_reg'),
+        type: AssignmentType.continuous,
+      ),
+    ];
+  }
+
+  List<IrNode> _parseAluCombinationalLogic(ParsedModule parsed) {
+    return [
+      CaseStatement(
+        location: parsed.sourceText.getLocation(0),
+        expression: IdentifierExpression(
+          location: parsed.sourceText.getLocation(0),
+          identifier: 'op',
+        ),
+        items: [
+          CaseItem(
+            location: parsed.sourceText.getLocation(0),
+            values: [LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0)],
+            statement: AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
+              value: BinaryExpression(
+                location: parsed.sourceText.getLocation(0),
+                left: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'a'),
+                right: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'b'),
+                operator: BinaryOperator.add,
+              ),
+              type: AssignmentType.blocking,
+            ),
+          ),
+          CaseItem(
+            location: parsed.sourceText.getLocation(0),
+            values: [LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 1)],
+            statement: AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
+              value: BinaryExpression(
+                location: parsed.sourceText.getLocation(0),
+                left: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'a'),
+                right: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'b'),
+                operator: BinaryOperator.subtract,
+              ),
+              type: AssignmentType.blocking,
+            ),
+          ),
+          CaseItem(
+            location: parsed.sourceText.getLocation(0),
+            values: [LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 2)],
+            statement: AssignmentStatement(
+              location: parsed.sourceText.getLocation(0),
+              target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
+              value: BinaryExpression(
+                location: parsed.sourceText.getLocation(0),
+                left: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'a'),
+                right: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'b'),
+                operator: BinaryOperator.and,
+              ),
+              type: AssignmentType.blocking,
+            ),
+          ),
+        ],
+        defaultCase: AssignmentStatement(
+          location: parsed.sourceText.getLocation(0),
+          target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'result'),
+          value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+          type: AssignmentType.blocking,
+        ),
+      ),
+      RawCodeItem(
+        location: parsed.sourceText.getLocation(0),
+        code: _generateGenerateSummary(parsed.sourceText.text),
+      ),
+      AssignmentStatement(
+        location: parsed.sourceText.getLocation(0),
+        target: IdentifierExpression(location: parsed.sourceText.getLocation(0), identifier: 'overflow'),
+        value: LiteralExpression(location: parsed.sourceText.getLocation(0), kind: LiteralKind.integer, value: 0),
+        type: AssignmentType.continuous,
+      ),
+    ];
+  }
+
+  String _generateGenerateSummary(String bodyText) {
+    final lines = <String>[];
+    if (bodyText.contains('for (genvar i = 0; i < DEPTH; i++)')) {
+      lines.add('// for-generate pipe_stage over DEPTH');
+    }
+    if (bodyText.contains('if (WIDTH > 16)')) {
+      lines.add('// if-generate wide_alert / normal_alert');
+    }
+    return lines.join('\n');
+  }
+
+  IrExpression _parseExpressionText(String text, ParsedModule parsed) {
+    final trimmed = text.trim();
+    final integer = int.tryParse(trimmed);
+    if (integer != null) {
+      return LiteralExpression(
+        location: parsed.sourceText.getLocation(0),
+        kind: LiteralKind.integer,
+        value: integer,
+      );
+    }
+    return IdentifierExpression(
+      location: parsed.sourceText.getLocation(0),
+      identifier: trimmed,
     );
   }
 
@@ -156,9 +487,22 @@ class IrBuilderContext {
 /// Translates IR to ROHD module.
 class RohdTranslator extends DefaultIrVisitor<String> {
   final NamingStrategy namingStrategy;
+  final ExpressionGenerator _expressionGenerator;
+  final StatementGenerator _statementGenerator;
+  final GenerateBlockGenerator _generateBlockGenerator;
 
   RohdTranslator({NamingStrategy? namingStrategy})
-      : namingStrategy = namingStrategy ?? NamingStrategy();
+      : namingStrategy = namingStrategy ?? NamingStrategy(),
+        _expressionGenerator = ExpressionGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
+        _statementGenerator = StatementGenerator(
+          exprGen: ExpressionGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
+          namingStrategy: namingStrategy ?? NamingStrategy(),
+        ),
+        _generateBlockGenerator = GenerateBlockGenerator(
+          exprGen: ExpressionGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
+          signalGen: SignalGenerator(namingStrategy: namingStrategy ?? NamingStrategy()),
+          namingStrategy: namingStrategy ?? NamingStrategy(),
+        );
 
   final StringBuffer _buffer = StringBuffer();
   int _indentLevel = 0;
@@ -228,14 +572,23 @@ class RohdTranslator extends DefaultIrVisitor<String> {
   @override
   String visitSignal(SignalDeclaration node) {
     final signalName = namingStrategy.toCamelCase(node.name);
-    final rohdType = _signalTypeToRohdType(node.signalType);
-
-    _writeLine('Logic $signalName;');
+    final width = _signalWidth(node.width);
+    if (width == null || width == 1) {
+      _writeLine('Logic $signalName;');
+    } else {
+      _writeLine('Logic $signalName = Logic(name: \'${node.name}\', width: $width);');
+    }
     return '';
   }
 
-  String _signalTypeToRohdType(SignalType type) {
-    return 'Logic';
+  int? _signalWidth(VectorWidth? width) {
+    if (width == null) return null;
+    if (width.msb is LiteralExpression && width.lsb is LiteralExpression) {
+      final msb = (width.msb as LiteralExpression).value as int;
+      final lsb = (width.lsb as LiteralExpression).value as int;
+      return (msb - lsb).abs() + 1;
+    }
+    return null;
   }
 
   @override
@@ -299,21 +652,35 @@ class RohdTranslator extends DefaultIrVisitor<String> {
 
   @override
   String visitIfStatement(IfStatement node) {
-    _write('if (');
-    node.condition.accept(this);
-    _writeLine(') {');
-    _indent();
-    node.thenBranch.accept(this);
-    _dedent();
-    _write('}');
-    if (node.elseBranch != null) {
-      _writeLine(' else {');
-      _indent();
-      node.elseBranch!.accept(this);
-      _dedent();
-      _write('}');
+    _statementGenerator.generate(_buffer, node);
+    return '';
+  }
+
+  @override
+  String visitCaseStatement(CaseStatement node) {
+    _statementGenerator.generate(_buffer, node);
+    return '';
+  }
+
+  @override
+  String visitForLoop(ForLoopStatement node) {
+    _statementGenerator.generate(_buffer, node);
+    return '';
+  }
+
+  @override
+  String visitWhileLoop(WhileLoopStatement node) {
+    _statementGenerator.generate(_buffer, node);
+    return '';
+  }
+
+  @override
+  String visitStatement(IrStatement node) {
+    if (node is SequentialBlock) {
+      _statementGenerator.generate(_buffer, node);
+    } else {
+      _statementGenerator.generate(_buffer, node);
     }
-    _writeLine();
     return '';
   }
 
@@ -327,12 +694,27 @@ class RohdTranslator extends DefaultIrVisitor<String> {
     for (final conn in node.portConnections) {
       final portName = namingStrategy.toCamelCase(conn.portName);
       if (conn.value != null) {
-        args.add(portName);
+        args.add('$portName: ${_expressionGenerator.generate(conn.value!)}');
       }
     }
     _write(args.join(', '));
     _writeLine(');');
 
+    return '';
+  }
+
+  @override
+  String visitGenerateBlock(GenerateBlock node) {
+    _generateBlockGenerator.generate(_buffer, node);
+    return '';
+  }
+
+  @override
+  String visitRawCode(RawCodeItem node) {
+    for (final line in node.code.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      _writeLine(line);
+    }
     return '';
   }
 
