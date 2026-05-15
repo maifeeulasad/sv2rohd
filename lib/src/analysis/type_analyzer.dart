@@ -87,10 +87,12 @@ class TypeInfo {
 class TypeAnalyzer {
   final DiagnosticCollector diagnostics;
   final Map<String, TypeInfo> _types = {};
+  final Map<String, TypeInfo> _symbolTypes;
 
   TypeAnalyzer({
     required this.diagnostics,
-  }) {
+    Map<String, TypeInfo>? symbolTypes,
+  }) : _symbolTypes = symbolTypes ?? {} {
     // Register default types
     _types['logic'] = const TypeInfo(name: 'logic', isFourState: true);
     _types['bit'] = const TypeInfo(name: 'bit', isFourState: false);
@@ -126,7 +128,10 @@ class TypeAnalyzer {
     if (expr is LiteralExpression) {
       return _getLiteralType(expr);
     } else if (expr is IdentifierExpression) {
-      // Would need symbol table lookup
+      final resolvedType = _symbolTypes[expr.identifier];
+      if (resolvedType != null) {
+        return resolvedType;
+      }
       return TypeInfo.logic1();
     } else if (expr is BinaryExpression) {
       return _getBinaryExpressionType(expr);
@@ -225,9 +230,6 @@ class TypeAnalyzer {
       case BinaryOperator.arithmeticShiftRight:
         // Shift: result width = left operand width
         return leftType;
-
-      default:
-        return TypeInfo.logic1();
     }
   }
 
