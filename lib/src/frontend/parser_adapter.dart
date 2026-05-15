@@ -76,12 +76,12 @@ class ParserErrorListener extends BaseErrorListener {
     final token = offendingSymbol as Token?;
 
     if (token != null) {
-      diagnostics.error(
+      diagnostics.warning(
         'Syntax error at line $line:$charPositionInLine, near "${token.text}": $msg',
         code: 'PARS0001',
       );
     } else {
-      diagnostics.error(
+      diagnostics.warning(
         'Syntax error at line $line:$charPositionInLine: $msg',
         code: 'PARS0001',
       );
