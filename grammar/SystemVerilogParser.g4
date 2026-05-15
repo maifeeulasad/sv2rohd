@@ -36,6 +36,19 @@ source_text
     : timeunits_declaration? description*
     ;
 
+timeunits_declaration
+    : TIMEUNIT time_literal SEMICOLON
+    | TIMEUNIT time_literal COLON time_literal SEMICOLON
+    ;
+
+time_literal
+    : TIME_LITERAL
+    ;
+
+attribute
+    : ATTR_LPAREN expression ( COMMA expression )* ATTR_RPAREN
+    ;
+
 description
     : module_declaration
     | interface_declaration
@@ -198,10 +211,16 @@ output_declaration
 inout_declaration
     : INOUT ( net_type )? ( data_type_or_implicit )? ( signedness )?
       ( dimension )* list_of_port_identifiers
+
     ;
 
 list_of_port_identifiers
     : IDENTIFIER ( dimension )* ( COMMA IDENTIFIER ( dimension )* )*
+    ;
+
+port_identifier
+    : IDENTIFIER
+    | ESCAPED_IDENTIFIER
     ;
 
 // ===== DATA TYPES =====
@@ -220,6 +239,15 @@ data_type
     | integer_vector_type ( signing )? ( dimension )*
     | struct_union ( dimension )*
     | enum_identifier ( dimension )*
+    ;
+
+struct_union
+    : STRUCT
+    | UNION
+    ;
+
+enum_identifier
+    : ENUM
     ;
 
 integer_atom_type
@@ -333,12 +361,16 @@ procedural_statement
     | assertion_statement
     ;
 
+assertion_statement
+    : procedure_call
+    ;
+
 blocking_assignment
     : ( variable_identifier | variable_lvalue ) EQUALS expression
     ;
 
 non_blocking_assignment
-    : ( variable_identifier | variable_lvalue ) LTE expression
+    : ( variable_identifier | variable_lvalue ) LE expression
     ;
 
 procedural_continuous_assignment
@@ -395,7 +427,7 @@ for_step
     ;
 
 for_step_assignment
-    : variable_lvalue ( PLUS_EQ | MINUS_EQ | MULT_EQ | DIV_EQ | MOD_EQ | AND_EQ | OR_EQ | XOR_EQ ) expression
+    : variable_lvalue ( PLUSEQ | MINUSEQ | MULTEQ | DIVEQ | MODEQ | ANDEQ | OREQ | XOREQ ) expression
     | variable_lvalue ( PLUS_PLUS | MINUS_MINUS )
     ;
 
@@ -428,6 +460,10 @@ delay_control
     : HASH delay_value
     ;
 
+delay3
+    : delay_control
+    ;
+
 delay_value
     : primary
     | INTEGER_LITERAL
@@ -438,7 +474,7 @@ event_control
     ;
 
 sensitivity_list
-    : STAR
+    : MULT
     | LPAREN ( event_expression ( COMMA event_expression )* | COMMA )? RPAREN
     ;
 
@@ -679,7 +715,7 @@ lifetime
 
 expression
     : primary
-    | expression ( BAND | BOR | BXOR | NAND | NOR | NXOR ) expression
+    | expression ( BAND | BOR | BXOR | NAND | NOR | LXOR ) expression
     | expression ( EQ | NEQ | CEQ | CNEQ | LT | LE | GT | GE | SLEFT | SRIGHT | SLEFT_ARITH | SRIGHT_ARITH ) expression
     | expression ( PLUS | MINUS | MULT | DIV | MOD ) expression
     | expression ( AND | OR ) expression
@@ -738,216 +774,7 @@ unary_operator
     : PLUS | MINUS | BNOT | NOT
     ;
 
-// ===== IDENTIFIERS AND MISC =====
-
-IDENTIFIER
-    : [a-zA-Z_] [a-zA-Z0-9_$]*
-    ;
-
-ESCAPED_IDENTIFIER
-    : '\\' ~[ \t\r\n]+
-    ;
-
-// ===== TIME UNITS =====
-
-timeunits_declaration
-    : TIMEUNIT time_literal SEMICOLON
-    | TIMEUNIT time_literal COLON time_literal SEMICOLON
-    ;
-
-time_literal
-    : REAL_LITERAL [npu]? 's'
-    ;
-
-// ===== ATTRIBUTES =====
-
-attribute
-    : ATTR_LPAREN expression ( COMMA expression )* ATTR_RPAREN
-    ;
-
-ATTR_LPAREN
-    : '(*'
-    ;
-
-ATTR_RPAREN
-    : '*)'
-    ;
-
-// ===== MISC =====
-
 comment
     : ML_COMMENT
     | LINE_COMMENT
-    ;
-
-NULL
-    : 'null'
-    ;
-
-PLUS_PLUS
-    : '++'
-    ;
-
-MINUS_MINUS
-    : '--'
-    ;
-
-PLUS_EQ
-    : '+='
-    ;
-
-MINUS_EQ
-    : '-='
-    ;
-
-MULT_EQ
-    : '*='
-    ;
-
-DIV_EQ
-    : '/='
-    ;
-
-MOD_EQ
-    : '%='
-    ;
-
-AND_EQ
-    : '&='
-    ;
-
-OR_EQ
-    : '|='
-    ;
-
-XOR_EQ
-    : '^='
-    ;
-
-LTE
-    : '<='
-    ;
-
-POSEDGE
-    : 'posedge'
-    ;
-
-NEGEDGE
-    : 'negedge'
-    ;
-
-SUPPLY0
-    : 'supply0'
-    ;
-
-SUPPLY1
-    : 'supply1'
-    ;
-
-TRI
-    : 'tri'
-    ;
-
-TRI0
-    : 'tri0'
-    ;
-
-TRI1
-    : 'tri1'
-    ;
-
-TRIAND
-    : 'triand'
-    ;
-
-TRIOR
-    : 'trior'
-    ;
-
-TRIREG
-    : 'trireg'
-    ;
-
-SMALL
-    : 'small'
-    ;
-
-MEDIUM
-    : 'medium'
-    ;
-
-LARGE
-    : 'large'
-    ;
-
-STRONG0
-    : 'strong0'
-    ;
-
-STRONG1
-    : 'strong1'
-    ;
-
-PULL0
-    : 'pull0'
-    ;
-
-PULL1
-    : 'pull1'
-    ;
-
-PULLUP
-    : 'pullup'
-    ;
-
-PULLDOWN
-    : 'pulldown'
-    ;
-
-WEAK0
-    : 'weak0'
-    ;
-
-WEAK1
-    : 'weak1'
-    ;
-
-HIGHZ0
-    : 'highz0'
-    ;
-
-HIGHZ1
-    : 'highz1'
-    ;
-
-VECTORED
-    : 'vectored'
-    ;
-
-SCALARED
-    : 'scalared'
-    ;
-
-REF
-    : 'ref'
-    ;
-
-TIMEUNIT
-    : 'timeunit'
-    ;
-
-SUPER
-    : 'super'
-    ;
-
-THIS
-    : 'this'
-    ;
-
-PULLUP
-    : 'pullup'
-    ;
-
-PULLDOWN
-    : 'pulldown'
     ;
