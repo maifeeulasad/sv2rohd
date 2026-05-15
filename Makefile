@@ -47,7 +47,7 @@ build-grammar: ## Build ANTLR grammar files
 
 antlr-grammar:
 	@echo "Generating ANTLR grammar files..."
-	java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -o lib/generated grammar/SystemVerilogLexer.g4 && java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -lib lib/generated/grammar -o lib/generated grammar/SystemVerilogParser.g4
+	@java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -o lib/generated grammar/SystemVerilogLexer.g4 && java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -lib lib/generated/grammar -o lib/generated grammar/SystemVerilogParser.g4
 	@echo "✓ ANTLR grammar files generated"
 
 compile: setup ## Compile the project to executable
