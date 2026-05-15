@@ -30,3 +30,6 @@ doc/api/
 
 # Coverage reports
 coverage/
+
+# Generated output
+output/
