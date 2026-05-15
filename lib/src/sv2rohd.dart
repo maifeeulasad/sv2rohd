@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import 'package:args/args.dart';
-import 'package:path/path.dart' as p;
 import 'common/common.dart';
 import 'codegen/naming_strategy.dart';
 import 'frontend/frontend.dart';
