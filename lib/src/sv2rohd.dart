@@ -124,7 +124,9 @@ Options:
     // write output to a file inside that directory using the input basename.
     if (outputPath != null) {
       final outDir = Directory(outputPath);
-      if (outDir.existsSync() || outputPath.endsWith(p.separator) || outputPath.endsWith('/')) {
+      if (outDir.existsSync() ||
+          outputPath.endsWith(p.separator) ||
+          outputPath.endsWith('/')) {
         final base = p.basenameWithoutExtension(inputPath);
         outputPath = p.join(outputPath, '$base.dart');
       }
