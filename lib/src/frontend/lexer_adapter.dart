@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import 'package:antlr4/antlr4.dart';
+import 'package:sv2rohd/generated/grammar/SystemVerilogLexer.dart';
 
 import '../common/common.dart';
 
@@ -22,13 +23,16 @@ class LexerAdapter {
   /// Tokenizes the source text.
   List<Token> tokenize() {
     final inputStream = InputStream.fromString(source);
-    // todo: need to revisit, @maifeeulasad
-    // Note: SystemVerilogLexer would be generated from grammar files
-    // For now, return empty list as placeholder
-    _tokens.clear();
+    final lexer = SystemVerilogLexer(inputStream);
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(LexerErrorListener(diagnostics));
 
-    // Sort tokens by start position
-    _tokens.sort((a, b) => a.tokenIndex.compareTo(b.tokenIndex));
+    final tokenStream = CommonTokenStream(lexer);
+    tokenStream.fill();
+
+    _tokens
+      ..clear()
+      ..addAll(tokenStream.tokens.cast<Token>());
 
     return _tokens;
   }
