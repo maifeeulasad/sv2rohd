@@ -1,6 +1,8 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
+import 'dart:io';
+
 import '../common/common.dart';
 import 'source_text.dart';
 
@@ -196,9 +198,11 @@ class Preprocessor {
 
   /// Reads a file content.
   String _readFile(String path) {
-    // This would be implemented with file system access
-    // For now, just throw an error
-    throw Exception('File not found: $path');
+    final file = File(path);
+    if (!file.existsSync()) {
+      throw Exception('File not found: $path');
+    }
+    return file.readAsStringSync();
   }
 }
 
