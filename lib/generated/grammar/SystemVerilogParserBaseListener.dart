@@ -5,7 +5,6 @@ import 'package:antlr4/antlr4.dart';
 import 'SystemVerilogParser.dart';
 import 'SystemVerilogParserListener.dart';
 
-
 /// This class provides an empty implementation of [SystemVerilogParserListener],
 /// which can be extended to create a listener which only needs to handle
 /// a subset of the available methods.
@@ -132,11 +131,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterLocal_parameter_declaration(Local_parameter_declarationContext ctx) {}
+  void enterLocal_parameter_declaration(
+      Local_parameter_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitLocal_parameter_declaration(Local_parameter_declarationContext ctx) {}
+  void exitLocal_parameter_declaration(
+      Local_parameter_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -204,11 +205,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterDef_struct_or_union_or_enum(Def_struct_or_union_or_enumContext ctx) {}
+  void enterDef_struct_or_union_or_enum(
+      Def_struct_or_union_or_enumContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDef_struct_or_union_or_enum(Def_struct_or_union_or_enumContext ctx) {}
+  void exitDef_struct_or_union_or_enum(
+      Def_struct_or_union_or_enumContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -244,11 +247,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_net_decl_assignments(List_of_net_decl_assignmentsContext ctx) {}
+  void enterList_of_net_decl_assignments(
+      List_of_net_decl_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_net_decl_assignments(List_of_net_decl_assignmentsContext ctx) {}
+  void exitList_of_net_decl_assignments(
+      List_of_net_decl_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -324,11 +329,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterImplicitly_declared_data_type(Implicitly_declared_data_typeContext ctx) {}
+  void enterImplicitly_declared_data_type(
+      Implicitly_declared_data_typeContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitImplicitly_declared_data_type(Implicitly_declared_data_typeContext ctx) {}
+  void exitImplicitly_declared_data_type(
+      Implicitly_declared_data_typeContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -556,11 +563,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterProcedural_continuous_assignment(Procedural_continuous_assignmentContext ctx) {}
+  void enterProcedural_continuous_assignment(
+      Procedural_continuous_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitProcedural_continuous_assignment(Procedural_continuous_assignmentContext ctx) {}
+  void exitProcedural_continuous_assignment(
+      Procedural_continuous_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -676,11 +685,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterProcedural_timing_control_statement(Procedural_timing_control_statementContext ctx) {}
+  void enterProcedural_timing_control_statement(
+      Procedural_timing_control_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitProcedural_timing_control_statement(Procedural_timing_control_statementContext ctx) {}
+  void exitProcedural_timing_control_statement(
+      Procedural_timing_control_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -780,11 +791,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterOrdered_parameter_assignment(Ordered_parameter_assignmentContext ctx) {}
+  void enterOrdered_parameter_assignment(
+      Ordered_parameter_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitOrdered_parameter_assignment(Ordered_parameter_assignmentContext ctx) {}
+  void exitOrdered_parameter_assignment(
+      Ordered_parameter_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -836,11 +849,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterConditional_generate_construct(Conditional_generate_constructContext ctx) {}
+  void enterConditional_generate_construct(
+      Conditional_generate_constructContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitConditional_generate_construct(Conditional_generate_constructContext ctx) {}
+  void exitConditional_generate_construct(
+      Conditional_generate_constructContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1012,11 +1027,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterFunction_data_type_or_implicit(Function_data_type_or_implicitContext ctx) {}
+  void enterFunction_data_type_or_implicit(
+      Function_data_type_or_implicitContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitFunction_data_type_or_implicit(Function_data_type_or_implicitContext ctx) {}
+  void exitFunction_data_type_or_implicit(
+      Function_data_type_or_implicitContext ctx) {}
 
   /// The default implementation does nothing.
   @override
