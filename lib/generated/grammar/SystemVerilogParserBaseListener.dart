@@ -5,7 +5,6 @@ import 'package:antlr4/antlr4.dart';
 import 'SystemVerilogParser.dart';
 import 'SystemVerilogParserListener.dart';
 
-
 /// This class provides an empty implementation of [SystemVerilogParserListener],
 /// which can be extended to create a listener which only needs to handle
 /// a subset of the available methods.
@@ -132,11 +131,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterInterface_class_declaration(Interface_class_declarationContext ctx) {}
+  void enterInterface_class_declaration(
+      Interface_class_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitInterface_class_declaration(Interface_class_declarationContext ctx) {}
+  void exitInterface_class_declaration(
+      Interface_class_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -316,11 +317,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterModule_or_generate_item_declaration(Module_or_generate_item_declarationContext ctx) {}
+  void enterModule_or_generate_item_declaration(
+      Module_or_generate_item_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitModule_or_generate_item_declaration(Module_or_generate_item_declarationContext ctx) {}
+  void exitModule_or_generate_item_declaration(
+      Module_or_generate_item_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -540,11 +543,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterChecker_or_generate_item_declaration(Checker_or_generate_item_declarationContext ctx) {}
+  void enterChecker_or_generate_item_declaration(
+      Checker_or_generate_item_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitChecker_or_generate_item_declaration(Checker_or_generate_item_declarationContext ctx) {}
+  void exitChecker_or_generate_item_declaration(
+      Checker_or_generate_item_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -580,11 +585,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterClass_constructor_prototype(Class_constructor_prototypeContext ctx) {}
+  void enterClass_constructor_prototype(
+      Class_constructor_prototypeContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitClass_constructor_prototype(Class_constructor_prototypeContext ctx) {}
+  void exitClass_constructor_prototype(
+      Class_constructor_prototypeContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -636,11 +643,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterClass_constructor_declaration(Class_constructor_declarationContext ctx) {}
+  void enterClass_constructor_declaration(
+      Class_constructor_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitClass_constructor_declaration(Class_constructor_declarationContext ctx) {}
+  void exitClass_constructor_declaration(
+      Class_constructor_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -740,19 +749,23 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterConstraint_prototype_qualifier(Constraint_prototype_qualifierContext ctx) {}
+  void enterConstraint_prototype_qualifier(
+      Constraint_prototype_qualifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitConstraint_prototype_qualifier(Constraint_prototype_qualifierContext ctx) {}
+  void exitConstraint_prototype_qualifier(
+      Constraint_prototype_qualifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterExtern_constraint_declaration(Extern_constraint_declarationContext ctx) {}
+  void enterExtern_constraint_declaration(
+      Extern_constraint_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitExtern_constraint_declaration(Extern_constraint_declarationContext ctx) {}
+  void exitExtern_constraint_declaration(
+      Extern_constraint_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -772,11 +785,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterPackage_or_generate_item_declaration(Package_or_generate_item_declarationContext ctx) {}
+  void enterPackage_or_generate_item_declaration(
+      Package_or_generate_item_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitPackage_or_generate_item_declaration(Package_or_generate_item_declarationContext ctx) {}
+  void exitPackage_or_generate_item_declaration(
+      Package_or_generate_item_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -796,11 +811,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterLocal_parameter_declaration(Local_parameter_declarationContext ctx) {}
+  void enterLocal_parameter_declaration(
+      Local_parameter_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitLocal_parameter_declaration(Local_parameter_declarationContext ctx) {}
+  void exitLocal_parameter_declaration(
+      Local_parameter_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1164,11 +1181,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_defparam_assignments(List_of_defparam_assignmentsContext ctx) {}
+  void enterList_of_defparam_assignments(
+      List_of_defparam_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_defparam_assignments(List_of_defparam_assignmentsContext ctx) {}
+  void exitList_of_defparam_assignments(
+      List_of_defparam_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1180,19 +1199,23 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_interface_identifiers(List_of_interface_identifiersContext ctx) {}
+  void enterList_of_interface_identifiers(
+      List_of_interface_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_interface_identifiers(List_of_interface_identifiersContext ctx) {}
+  void exitList_of_interface_identifiers(
+      List_of_interface_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_net_decl_assignments(List_of_net_decl_assignmentsContext ctx) {}
+  void enterList_of_net_decl_assignments(
+      List_of_net_decl_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_net_decl_assignments(List_of_net_decl_assignmentsContext ctx) {}
+  void exitList_of_net_decl_assignments(
+      List_of_net_decl_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1212,19 +1235,23 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_specparam_assignments(List_of_specparam_assignmentsContext ctx) {}
+  void enterList_of_specparam_assignments(
+      List_of_specparam_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_specparam_assignments(List_of_specparam_assignmentsContext ctx) {}
+  void exitList_of_specparam_assignments(
+      List_of_specparam_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_tf_variable_identifiers(List_of_tf_variable_identifiersContext ctx) {}
+  void enterList_of_tf_variable_identifiers(
+      List_of_tf_variable_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_tf_variable_identifiers(List_of_tf_variable_identifiersContext ctx) {}
+  void exitList_of_tf_variable_identifiers(
+      List_of_tf_variable_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1236,35 +1263,43 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_udp_port_identifiers(List_of_udp_port_identifiersContext ctx) {}
+  void enterList_of_udp_port_identifiers(
+      List_of_udp_port_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_udp_port_identifiers(List_of_udp_port_identifiersContext ctx) {}
+  void exitList_of_udp_port_identifiers(
+      List_of_udp_port_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_variable_decl_assignments(List_of_variable_decl_assignmentsContext ctx) {}
+  void enterList_of_variable_decl_assignments(
+      List_of_variable_decl_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_variable_decl_assignments(List_of_variable_decl_assignmentsContext ctx) {}
+  void exitList_of_variable_decl_assignments(
+      List_of_variable_decl_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_variable_identifiers(List_of_variable_identifiersContext ctx) {}
+  void enterList_of_variable_identifiers(
+      List_of_variable_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_variable_identifiers(List_of_variable_identifiersContext ctx) {}
+  void exitList_of_variable_identifiers(
+      List_of_variable_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_variable_port_identifiers(List_of_variable_port_identifiersContext ctx) {}
+  void enterList_of_variable_port_identifiers(
+      List_of_variable_port_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_variable_port_identifiers(List_of_variable_port_identifiersContext ctx) {}
+  void exitList_of_variable_port_identifiers(
+      List_of_variable_port_identifiersContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1412,11 +1447,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterFunction_data_type_or_implicit(Function_data_type_or_implicitContext ctx) {}
+  void enterFunction_data_type_or_implicit(
+      Function_data_type_or_implicitContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitFunction_data_type_or_implicit(Function_data_type_or_implicitContext ctx) {}
+  void exitFunction_data_type_or_implicit(
+      Function_data_type_or_implicitContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1460,11 +1497,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterDpi_function_import_property(Dpi_function_import_propertyContext ctx) {}
+  void enterDpi_function_import_property(
+      Dpi_function_import_propertyContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDpi_function_import_property(Dpi_function_import_propertyContext ctx) {}
+  void exitDpi_function_import_property(
+      Dpi_function_import_propertyContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1612,19 +1651,23 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterModport_clocking_declaration(Modport_clocking_declarationContext ctx) {}
+  void enterModport_clocking_declaration(
+      Modport_clocking_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitModport_clocking_declaration(Modport_clocking_declarationContext ctx) {}
+  void exitModport_clocking_declaration(
+      Modport_clocking_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterModport_simple_ports_declaration(Modport_simple_ports_declarationContext ctx) {}
+  void enterModport_simple_ports_declaration(
+      Modport_simple_ports_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitModport_simple_ports_declaration(Modport_simple_ports_declarationContext ctx) {}
+  void exitModport_simple_ports_declaration(
+      Modport_simple_ports_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1636,11 +1679,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterModport_tf_ports_declaration(Modport_tf_ports_declarationContext ctx) {}
+  void enterModport_tf_ports_declaration(
+      Modport_tf_ports_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitModport_tf_ports_declaration(Modport_tf_ports_declarationContext ctx) {}
+  void exitModport_tf_ports_declaration(
+      Modport_tf_ports_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1668,11 +1713,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterConcurrent_assertion_statement(Concurrent_assertion_statementContext ctx) {}
+  void enterConcurrent_assertion_statement(
+      Concurrent_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitConcurrent_assertion_statement(Concurrent_assertion_statementContext ctx) {}
+  void exitConcurrent_assertion_statement(
+      Concurrent_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1716,11 +1763,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterRestrict_property_statement(Restrict_property_statementContext ctx) {}
+  void enterRestrict_property_statement(
+      Restrict_property_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitRestrict_property_statement(Restrict_property_statementContext ctx) {}
+  void exitRestrict_property_statement(
+      Restrict_property_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1780,11 +1829,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterProperty_lvar_port_direction(Property_lvar_port_directionContext ctx) {}
+  void enterProperty_lvar_port_direction(
+      Property_lvar_port_directionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitProperty_lvar_port_direction(Property_lvar_port_directionContext ctx) {}
+  void exitProperty_lvar_port_direction(
+      Property_lvar_port_directionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1844,11 +1895,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterSequence_lvar_port_direction(Sequence_lvar_port_directionContext ctx) {}
+  void enterSequence_lvar_port_direction(
+      Sequence_lvar_port_directionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitSequence_lvar_port_direction(Sequence_lvar_port_directionContext ctx) {}
+  void exitSequence_lvar_port_direction(
+      Sequence_lvar_port_directionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1964,11 +2017,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterCycle_delay_const_range_expression(Cycle_delay_const_range_expressionContext ctx) {}
+  void enterCycle_delay_const_range_expression(
+      Cycle_delay_const_range_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitCycle_delay_const_range_expression(Cycle_delay_const_range_expressionContext ctx) {}
+  void exitCycle_delay_const_range_expression(
+      Cycle_delay_const_range_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -1980,11 +2035,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterAssertion_variable_declaration(Assertion_variable_declarationContext ctx) {}
+  void enterAssertion_variable_declaration(
+      Assertion_variable_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitAssertion_variable_declaration(Assertion_variable_declarationContext ctx) {}
+  void exitAssertion_variable_declaration(
+      Assertion_variable_declarationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2100,11 +2157,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_btf_identifier(Hierarchical_btf_identifierContext ctx) {}
+  void enterHierarchical_btf_identifier(
+      Hierarchical_btf_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_btf_identifier(Hierarchical_btf_identifierContext ctx) {}
+  void exitHierarchical_btf_identifier(
+      Hierarchical_btf_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2292,11 +2351,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterInteger_covergroup_expression(Integer_covergroup_expressionContext ctx) {}
+  void enterInteger_covergroup_expression(
+      Integer_covergroup_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitInteger_covergroup_expression(Integer_covergroup_expressionContext ctx) {}
+  void exitInteger_covergroup_expression(
+      Integer_covergroup_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2332,19 +2393,23 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_parameter_assignments(List_of_parameter_assignmentsContext ctx) {}
+  void enterList_of_parameter_assignments(
+      List_of_parameter_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_parameter_assignments(List_of_parameter_assignmentsContext ctx) {}
+  void exitList_of_parameter_assignments(
+      List_of_parameter_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterOrdered_parameter_assignment(Ordered_parameter_assignmentContext ctx) {}
+  void enterOrdered_parameter_assignment(
+      Ordered_parameter_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitOrdered_parameter_assignment(Ordered_parameter_assignmentContext ctx) {}
+  void exitOrdered_parameter_assignment(
+      Ordered_parameter_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2420,27 +2485,33 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_checker_port_connections(List_of_checker_port_connectionsContext ctx) {}
+  void enterList_of_checker_port_connections(
+      List_of_checker_port_connectionsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_checker_port_connections(List_of_checker_port_connectionsContext ctx) {}
+  void exitList_of_checker_port_connections(
+      List_of_checker_port_connectionsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterOrdered_checker_port_connection(Ordered_checker_port_connectionContext ctx) {}
+  void enterOrdered_checker_port_connection(
+      Ordered_checker_port_connectionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitOrdered_checker_port_connection(Ordered_checker_port_connectionContext ctx) {}
+  void exitOrdered_checker_port_connection(
+      Ordered_checker_port_connectionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterNamed_checker_port_connection(Named_checker_port_connectionContext ctx) {}
+  void enterNamed_checker_port_connection(
+      Named_checker_port_connectionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitNamed_checker_port_connection(Named_checker_port_connectionContext ctx) {}
+  void exitNamed_checker_port_connection(
+      Named_checker_port_connectionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2476,11 +2547,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterConditional_generate_construct(Conditional_generate_constructContext ctx) {}
+  void enterConditional_generate_construct(
+      Conditional_generate_constructContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitConditional_generate_construct(Conditional_generate_constructContext ctx) {}
+  void exitConditional_generate_construct(
+      Conditional_generate_constructContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2540,11 +2613,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_variable_assignments(List_of_variable_assignmentsContext ctx) {}
+  void enterList_of_variable_assignments(
+      List_of_variable_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_variable_assignments(List_of_variable_assignmentsContext ctx) {}
+  void exitList_of_variable_assignments(
+      List_of_variable_assignmentsContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2628,11 +2703,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterProcedural_continuous_assignment(Procedural_continuous_assignmentContext ctx) {}
+  void enterProcedural_continuous_assignment(
+      Procedural_continuous_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitProcedural_continuous_assignment(Procedural_continuous_assignmentContext ctx) {}
+  void exitProcedural_continuous_assignment(
+      Procedural_continuous_assignmentContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2724,11 +2801,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterProcedural_timing_control_statement(Procedural_timing_control_statementContext ctx) {}
+  void enterProcedural_timing_control_statement(
+      Procedural_timing_control_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitProcedural_timing_control_statement(Procedural_timing_control_statementContext ctx) {}
+  void exitProcedural_timing_control_statement(
+      Procedural_timing_control_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -2964,43 +3043,53 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterAssignment_pattern_expression(Assignment_pattern_expressionContext ctx) {}
+  void enterAssignment_pattern_expression(
+      Assignment_pattern_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitAssignment_pattern_expression(Assignment_pattern_expressionContext ctx) {}
+  void exitAssignment_pattern_expression(
+      Assignment_pattern_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterAssignment_pattern_expression_type(Assignment_pattern_expression_typeContext ctx) {}
+  void enterAssignment_pattern_expression_type(
+      Assignment_pattern_expression_typeContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitAssignment_pattern_expression_type(Assignment_pattern_expression_typeContext ctx) {}
+  void exitAssignment_pattern_expression_type(
+      Assignment_pattern_expression_typeContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterConstant_assignment_pattern_expression(Constant_assignment_pattern_expressionContext ctx) {}
+  void enterConstant_assignment_pattern_expression(
+      Constant_assignment_pattern_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitConstant_assignment_pattern_expression(Constant_assignment_pattern_expressionContext ctx) {}
+  void exitConstant_assignment_pattern_expression(
+      Constant_assignment_pattern_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterAssignment_pattern_net_lvalue(Assignment_pattern_net_lvalueContext ctx) {}
+  void enterAssignment_pattern_net_lvalue(
+      Assignment_pattern_net_lvalueContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitAssignment_pattern_net_lvalue(Assignment_pattern_net_lvalueContext ctx) {}
+  void exitAssignment_pattern_net_lvalue(
+      Assignment_pattern_net_lvalueContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterAssignment_pattern_variable_lvalue(Assignment_pattern_variable_lvalueContext ctx) {}
+  void enterAssignment_pattern_variable_lvalue(
+      Assignment_pattern_variable_lvalueContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitAssignment_pattern_variable_lvalue(Assignment_pattern_variable_lvalueContext ctx) {}
+  void exitAssignment_pattern_variable_lvalue(
+      Assignment_pattern_variable_lvalueContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -3068,91 +3157,113 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterDeferred_immediate_assertion_item(Deferred_immediate_assertion_itemContext ctx) {}
+  void enterDeferred_immediate_assertion_item(
+      Deferred_immediate_assertion_itemContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDeferred_immediate_assertion_item(Deferred_immediate_assertion_itemContext ctx) {}
+  void exitDeferred_immediate_assertion_item(
+      Deferred_immediate_assertion_itemContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterProcedural_assertion_statement(Procedural_assertion_statementContext ctx) {}
+  void enterProcedural_assertion_statement(
+      Procedural_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitProcedural_assertion_statement(Procedural_assertion_statementContext ctx) {}
+  void exitProcedural_assertion_statement(
+      Procedural_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterImmediate_assertion_statement(Immediate_assertion_statementContext ctx) {}
+  void enterImmediate_assertion_statement(
+      Immediate_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitImmediate_assertion_statement(Immediate_assertion_statementContext ctx) {}
+  void exitImmediate_assertion_statement(
+      Immediate_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterSimple_immediate_assertion_statement(Simple_immediate_assertion_statementContext ctx) {}
+  void enterSimple_immediate_assertion_statement(
+      Simple_immediate_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitSimple_immediate_assertion_statement(Simple_immediate_assertion_statementContext ctx) {}
+  void exitSimple_immediate_assertion_statement(
+      Simple_immediate_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterSimple_immediate_assert_statement(Simple_immediate_assert_statementContext ctx) {}
+  void enterSimple_immediate_assert_statement(
+      Simple_immediate_assert_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitSimple_immediate_assert_statement(Simple_immediate_assert_statementContext ctx) {}
+  void exitSimple_immediate_assert_statement(
+      Simple_immediate_assert_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterSimple_immediate_assume_statement(Simple_immediate_assume_statementContext ctx) {}
+  void enterSimple_immediate_assume_statement(
+      Simple_immediate_assume_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitSimple_immediate_assume_statement(Simple_immediate_assume_statementContext ctx) {}
+  void exitSimple_immediate_assume_statement(
+      Simple_immediate_assume_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterSimple_immediate_cover_statement(Simple_immediate_cover_statementContext ctx) {}
+  void enterSimple_immediate_cover_statement(
+      Simple_immediate_cover_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitSimple_immediate_cover_statement(Simple_immediate_cover_statementContext ctx) {}
+  void exitSimple_immediate_cover_statement(
+      Simple_immediate_cover_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterDeferred_immediate_assertion_statement(Deferred_immediate_assertion_statementContext ctx) {}
+  void enterDeferred_immediate_assertion_statement(
+      Deferred_immediate_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDeferred_immediate_assertion_statement(Deferred_immediate_assertion_statementContext ctx) {}
+  void exitDeferred_immediate_assertion_statement(
+      Deferred_immediate_assertion_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterDeferred_immediate_assert_statement(Deferred_immediate_assert_statementContext ctx) {}
+  void enterDeferred_immediate_assert_statement(
+      Deferred_immediate_assert_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDeferred_immediate_assert_statement(Deferred_immediate_assert_statementContext ctx) {}
+  void exitDeferred_immediate_assert_statement(
+      Deferred_immediate_assert_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterDeferred_immediate_assume_statement(Deferred_immediate_assume_statementContext ctx) {}
+  void enterDeferred_immediate_assume_statement(
+      Deferred_immediate_assume_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDeferred_immediate_assume_statement(Deferred_immediate_assume_statementContext ctx) {}
+  void exitDeferred_immediate_assume_statement(
+      Deferred_immediate_assume_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterDeferred_immediate_cover_statement(Deferred_immediate_cover_statementContext ctx) {}
+  void enterDeferred_immediate_cover_statement(
+      Deferred_immediate_cover_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDeferred_immediate_cover_statement(Deferred_immediate_cover_statementContext ctx) {}
+  void exitDeferred_immediate_cover_statement(
+      Deferred_immediate_cover_statementContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -3196,11 +3307,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterList_of_clocking_decl_assign(List_of_clocking_decl_assignContext ctx) {}
+  void enterList_of_clocking_decl_assign(
+      List_of_clocking_decl_assignContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitList_of_clocking_decl_assign(List_of_clocking_decl_assignContext ctx) {}
+  void exitList_of_clocking_decl_assign(
+      List_of_clocking_decl_assignContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -3380,11 +3493,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterConstant_multiple_concatenation(Constant_multiple_concatenationContext ctx) {}
+  void enterConstant_multiple_concatenation(
+      Constant_multiple_concatenationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitConstant_multiple_concatenation(Constant_multiple_concatenationContext ctx) {}
+  void exitConstant_multiple_concatenation(
+      Constant_multiple_concatenationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -3396,11 +3511,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterModule_path_multiple_concatenation(Module_path_multiple_concatenationContext ctx) {}
+  void enterModule_path_multiple_concatenation(
+      Module_path_multiple_concatenationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitModule_path_multiple_concatenation(Module_path_multiple_concatenationContext ctx) {}
+  void exitModule_path_multiple_concatenation(
+      Module_path_multiple_concatenationContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -3604,11 +3721,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterConstant_mintypmax_expression(Constant_mintypmax_expressionContext ctx) {}
+  void enterConstant_mintypmax_expression(
+      Constant_mintypmax_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitConstant_mintypmax_expression(Constant_mintypmax_expressionContext ctx) {}
+  void exitConstant_mintypmax_expression(
+      Constant_mintypmax_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -3708,11 +3827,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterModule_path_mintypmax_expression(Module_path_mintypmax_expressionContext ctx) {}
+  void enterModule_path_mintypmax_expression(
+      Module_path_mintypmax_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitModule_path_mintypmax_expression(Module_path_mintypmax_expressionContext ctx) {}
+  void exitModule_path_mintypmax_expression(
+      Module_path_mintypmax_expressionContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -3924,11 +4045,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterBinary_module_path_operator(Binary_module_path_operatorContext ctx) {}
+  void enterBinary_module_path_operator(
+      Binary_module_path_operatorContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitBinary_module_path_operator(Binary_module_path_operatorContext ctx) {}
+  void exitBinary_module_path_operator(
+      Binary_module_path_operatorContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -4340,11 +4463,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterInterface_instance_identifier(Interface_instance_identifierContext ctx) {}
+  void enterInterface_instance_identifier(
+      Interface_instance_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitInterface_instance_identifier(Interface_instance_identifierContext ctx) {}
+  void exitInterface_instance_identifier(
+      Interface_instance_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -4548,83 +4673,103 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterCovergroup_variable_identifier(Covergroup_variable_identifierContext ctx) {}
+  void enterCovergroup_variable_identifier(
+      Covergroup_variable_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitCovergroup_variable_identifier(Covergroup_variable_identifierContext ctx) {}
+  void exitCovergroup_variable_identifier(
+      Covergroup_variable_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterDynamic_array_variable_identifier(Dynamic_array_variable_identifierContext ctx) {}
+  void enterDynamic_array_variable_identifier(
+      Dynamic_array_variable_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitDynamic_array_variable_identifier(Dynamic_array_variable_identifierContext ctx) {}
+  void exitDynamic_array_variable_identifier(
+      Dynamic_array_variable_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_array_identifier(Hierarchical_array_identifierContext ctx) {}
+  void enterHierarchical_array_identifier(
+      Hierarchical_array_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_array_identifier(Hierarchical_array_identifierContext ctx) {}
+  void exitHierarchical_array_identifier(
+      Hierarchical_array_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_block_identifier(Hierarchical_block_identifierContext ctx) {}
+  void enterHierarchical_block_identifier(
+      Hierarchical_block_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_block_identifier(Hierarchical_block_identifierContext ctx) {}
+  void exitHierarchical_block_identifier(
+      Hierarchical_block_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_event_identifier(Hierarchical_event_identifierContext ctx) {}
+  void enterHierarchical_event_identifier(
+      Hierarchical_event_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_event_identifier(Hierarchical_event_identifierContext ctx) {}
+  void exitHierarchical_event_identifier(
+      Hierarchical_event_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_net_identifier(Hierarchical_net_identifierContext ctx) {}
+  void enterHierarchical_net_identifier(
+      Hierarchical_net_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_net_identifier(Hierarchical_net_identifierContext ctx) {}
+  void exitHierarchical_net_identifier(
+      Hierarchical_net_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_parameter_identifier(Hierarchical_parameter_identifierContext ctx) {}
+  void enterHierarchical_parameter_identifier(
+      Hierarchical_parameter_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_parameter_identifier(Hierarchical_parameter_identifierContext ctx) {}
+  void exitHierarchical_parameter_identifier(
+      Hierarchical_parameter_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_property_identifier(Hierarchical_property_identifierContext ctx) {}
+  void enterHierarchical_property_identifier(
+      Hierarchical_property_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_property_identifier(Hierarchical_property_identifierContext ctx) {}
+  void exitHierarchical_property_identifier(
+      Hierarchical_property_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_sequence_identifier(Hierarchical_sequence_identifierContext ctx) {}
+  void enterHierarchical_sequence_identifier(
+      Hierarchical_sequence_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_sequence_identifier(Hierarchical_sequence_identifierContext ctx) {}
+  void exitHierarchical_sequence_identifier(
+      Hierarchical_sequence_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_task_identifier(Hierarchical_task_identifierContext ctx) {}
+  void enterHierarchical_task_identifier(
+      Hierarchical_task_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_task_identifier(Hierarchical_task_identifierContext ctx) {}
+  void exitHierarchical_task_identifier(
+      Hierarchical_task_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -4636,11 +4781,13 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterHierarchical_variable_identifier(Hierarchical_variable_identifierContext ctx) {}
+  void enterHierarchical_variable_identifier(
+      Hierarchical_variable_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitHierarchical_variable_identifier(Hierarchical_variable_identifierContext ctx) {}
+  void exitHierarchical_variable_identifier(
+      Hierarchical_variable_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
@@ -4700,43 +4847,53 @@ class SystemVerilogParserBaseListener implements SystemVerilogParserListener {
 
   /// The default implementation does nothing.
   @override
-  void enterPs_or_hierarchical_array_identifier(Ps_or_hierarchical_array_identifierContext ctx) {}
+  void enterPs_or_hierarchical_array_identifier(
+      Ps_or_hierarchical_array_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitPs_or_hierarchical_array_identifier(Ps_or_hierarchical_array_identifierContext ctx) {}
+  void exitPs_or_hierarchical_array_identifier(
+      Ps_or_hierarchical_array_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterPs_or_hierarchical_net_identifier(Ps_or_hierarchical_net_identifierContext ctx) {}
+  void enterPs_or_hierarchical_net_identifier(
+      Ps_or_hierarchical_net_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitPs_or_hierarchical_net_identifier(Ps_or_hierarchical_net_identifierContext ctx) {}
+  void exitPs_or_hierarchical_net_identifier(
+      Ps_or_hierarchical_net_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterPs_or_hierarchical_property_identifier(Ps_or_hierarchical_property_identifierContext ctx) {}
+  void enterPs_or_hierarchical_property_identifier(
+      Ps_or_hierarchical_property_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitPs_or_hierarchical_property_identifier(Ps_or_hierarchical_property_identifierContext ctx) {}
+  void exitPs_or_hierarchical_property_identifier(
+      Ps_or_hierarchical_property_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterPs_or_hierarchical_sequence_identifier(Ps_or_hierarchical_sequence_identifierContext ctx) {}
+  void enterPs_or_hierarchical_sequence_identifier(
+      Ps_or_hierarchical_sequence_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitPs_or_hierarchical_sequence_identifier(Ps_or_hierarchical_sequence_identifierContext ctx) {}
+  void exitPs_or_hierarchical_sequence_identifier(
+      Ps_or_hierarchical_sequence_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void enterPs_or_hierarchical_tf_identifier(Ps_or_hierarchical_tf_identifierContext ctx) {}
+  void enterPs_or_hierarchical_tf_identifier(
+      Ps_or_hierarchical_tf_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
-  void exitPs_or_hierarchical_tf_identifier(Ps_or_hierarchical_tf_identifierContext ctx) {}
+  void exitPs_or_hierarchical_tf_identifier(
+      Ps_or_hierarchical_tf_identifierContext ctx) {}
 
   /// The default implementation does nothing.
   @override
