@@ -34,6 +34,11 @@ upgrade-deps: ## Upgrade all dependencies
 	@$(DART) pub upgrade
 	@echo "✓ Dependencies upgraded"
 
+download-rohd:
+	@echo "Downloading ROHD package..."
+	@git clone https://github.com/maifeeulasad/rohd.git
+	@echo "✓ ROHD package downloaded"
+
 ##@ Building
 build: ## Build the project (pub get)
 	@echo "Building project..."
