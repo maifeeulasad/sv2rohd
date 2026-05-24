@@ -54,7 +54,7 @@ class ParserAdapter {
     final parser = SystemVerilogParser(stream);
     parser.removeErrorListeners();
     parser.addErrorListener(ParserErrorListener(diagnostics));
-    return parser.expression(0);
+    return parser.expression();
   }
 }
 
