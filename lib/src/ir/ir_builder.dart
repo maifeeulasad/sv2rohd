@@ -10,6 +10,7 @@ import '../codegen/statement_generator.dart';
 import '../codegen/generate_block_generator.dart';
 import '../codegen/signal_generator.dart';
 import 'package:sv2rohd/generated/grammar/SystemVerilogParser.dart';
+import 'package:sv2rohd/generated/grammar/SystemVerilogLexer.dart';
 import 'ir_node.dart';
 import 'expression_ir.dart';
 import 'statement_ir.dart';
@@ -36,15 +37,25 @@ class IrBuilder {
   ModuleDeclaration _convertModuleDeclaration(
       dynamic ctx, ParsedModule parsed) {
     Module_declarationContext? moduleContext;
+    String moduleName = "unnamed_module";
 
     if (ctx is Source_textContext) {
       final descriptions = ctx.descriptions();
       if (descriptions.isNotEmpty) {
-        moduleContext = descriptions.first.module_declaration();
+        for (final d in descriptions) {
+          final m = d.module_declaration();
+          if (m != null) {
+            moduleContext = m;
+            break;
+          }
+        }
       }
     } else if (ctx is Module_declarationContext) {
       moduleContext = ctx;
     }
+
+    // Module name will be taken from parser header contexts below; do not
+    // attempt regex fallbacks to keep parsing deterministic and reliable.
 
     if (moduleContext == null) {
       return ModuleDeclaration(
@@ -53,52 +64,245 @@ class IrBuilder {
       );
     }
 
-    final moduleName =
-        moduleContext.module_identifier()?.text ?? 'unnamed_module';
-
-    final ports = <PortDeclaration>[];
-    final portList = moduleContext.module_port_list();
-    if (portList != null) {
-      for (final port in portList.ports()) {
-        final direction = port.input_declaration() != null
-            ? PortDirection.input
-            : port.output_declaration() != null
-                ? PortDirection.output
-                : PortDirection.inout;
-
-        final portIdentifiers = <String>[];
-        final input = port.input_declaration();
-        final output = port.output_declaration();
-        final inout = port.inout_declaration();
-        final listOfPortIdentifiers = input?.list_of_port_identifiers() ??
-            output?.list_of_port_identifiers() ??
-            inout?.list_of_port_identifiers();
-
-        if (listOfPortIdentifiers != null &&
-            listOfPortIdentifiers.IDENTIFIERs().isNotEmpty) {
-          for (final identifier in listOfPortIdentifiers.IDENTIFIERs()) {
-            portIdentifiers.add(identifier.text ?? 'unnamed_port');
-          }
+    final nonansiHeader = moduleContext.module_nonansi_header();
+    final ansiHeader = moduleContext.module_ansi_header();
+    if (nonansiHeader != null) {
+      final id = nonansiHeader.module_identifier();
+      if (id != null) {
+        final ident = id.identifier();
+        final simple = ident?.SimpleIdentifier();
+        if (simple != null && simple.text != null && simple.text!.isNotEmpty) {
+          moduleName = simple.text!;
         } else {
-          final portIdentifier = port.port_identifier();
-          if (portIdentifier != null) {
-            portIdentifiers.add(portIdentifier.text);
-          }
+          moduleName = id.identifier()?.SimpleIdentifier()?.text ?? '';
         }
-
-        for (final portName in portIdentifiers) {
-          ports.add(
-            PortDeclaration(
-              location: parsed.sourceText.getLocation(0),
-              name: portName,
-              direction: direction,
-            ),
-          );
+      }
+    } else if (ansiHeader != null) {
+      final id = ansiHeader.module_identifier();
+      if (id != null) {
+        final ident = id.identifier();
+        final simple = ident?.SimpleIdentifier();
+        if (simple != null && simple.text != null && simple.text!.isNotEmpty) {
+          moduleName = simple.text!;
+        } else {
+          moduleName = id.identifier()?.SimpleIdentifier()?.text ?? '';
+        }
+      }
+    } else {
+      final moduleIdentifiers = moduleContext.module_identifiers();
+      if (moduleIdentifiers.isNotEmpty) {
+        final idCtx = moduleContext.module_identifier(0);
+        if (idCtx != null) {
+          final ident = idCtx.identifier();
+          final simple = ident?.SimpleIdentifier();
+          if (simple != null && simple.text != null && simple.text!.isNotEmpty) {
+            moduleName = simple.text!;
+          } else {
+            moduleName = idCtx.identifier()?.SimpleIdentifier()?.text ?? '';
+          }
         }
       }
     }
 
+    // If parser contexts didn't provide a module name, fall back to scanning
+    // the token stream around the module declaration for the `module` keyword
+    // followed by an identifier. This uses the lexer/token stream (parser
+    // driven) rather than regex to deterministically find the name.
+    if ((moduleName.isEmpty || moduleName == 'unnamed_module') &&
+        parsed.tokens.isNotEmpty) {
+      final startIdx = moduleContext.start?.startIndex ?? 0;
+      final stopIdx = moduleContext.stop?.stopIndex ?? parsed.sourceText.text.length - 1;
+      for (var i = 0; i < parsed.tokens.length - 1; i++) {
+        final t = parsed.tokens[i];
+        if (t.startIndex >= startIdx && t.stopIndex <= stopIdx) {
+          final text = (t.text ?? '').toLowerCase();
+          if (text == 'module' || text == 'macromodule') {
+            // look for next token that's a plausible identifier
+            final next = parsed.tokens[i + 1];
+            final cand = next.text ?? '';
+            if (cand.isNotEmpty) {
+              moduleName = cand;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // First extract declared port names from the header.
+    final headerPortNames = <String>[];
+
+    if (nonansiHeader != null) {
+      final portList = nonansiHeader.list_of_ports();
+      if (portList != null) {
+        for (final port in portList.ports()) {
+          final expr = port.port_expression();
+          if (expr != null) {
+            for (final pref in expr.port_references()) {
+              final pid = pref.port_identifier();
+              if (pid != null) {
+                final ident = pid.identifier();
+                final simple = ident?.SimpleIdentifier();
+                final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
+                  ? simple.text!
+                  : pid.identifier()?.SimpleIdentifier()?.text ?? '';
+                headerPortNames.add(pName);
+              }
+            }
+          } else {
+            final pid = port.port_identifier();
+            if (pid != null) {
+              final ident = pid.identifier();
+              final simple = ident?.SimpleIdentifier();
+                final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
+                  ? simple.text!
+                  : pid.identifier()?.SimpleIdentifier()?.text ?? '';
+              headerPortNames.add(pName);
+            }
+          }
+        }
+      }
+    } else if (ansiHeader != null) {
+      final decls = ansiHeader.list_of_port_declarations();
+      if (decls != null) {
+        for (final decl in decls.ansi_port_declarations()) {
+          final pid = decl.port_identifier();
+          if (pid != null) {
+            final ident = pid.identifier();
+            final simple = ident?.SimpleIdentifier();
+            final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
+                ? simple.text!
+                : pid.identifier()?.SimpleIdentifier()?.text ?? '';
+            headerPortNames.add(pName);
+          }
+        }
+      }
+    }
+    // If header parsing via rule contexts failed to produce port names,
+    // attempt a token-stream based header scan: find the '(' after the
+    // module name and collect `SimpleIdentifier` tokens until the closing
+    // ')'. This uses lexer tokens (parser-driven) rather than regex.
+    if (headerPortNames.isEmpty && parsed.tokens.isNotEmpty) {
+      // find module token index within moduleContext range
+      final startIdx = moduleContext.start?.startIndex ?? 0;
+      final stopIdx = moduleContext.stop?.stopIndex ?? parsed.sourceText.text.length - 1;
+      int moduleTokenIndex = -1;
+      for (var i = 0; i < parsed.tokens.length; i++) {
+        final t = parsed.tokens[i];
+        if (t.startIndex >= startIdx && t.stopIndex <= stopIdx) {
+          final text = (t.text ?? '').toLowerCase();
+          if (text == 'module' || text == 'macromodule') {
+            moduleTokenIndex = i;
+            break;
+          }
+        }
+      }
+      if (moduleTokenIndex >= 0) {
+          diagnostics.info('ir_builder: moduleTokenIndex=$moduleTokenIndex token=${parsed.tokens[moduleTokenIndex].text}');
+        // find the '(' after moduleTokenIndex
+        int parenIndex = -1;
+        for (var i = moduleTokenIndex + 1; i < parsed.tokens.length; i++) {
+          final t = parsed.tokens[i];
+          if (t.startIndex > stopIdx) break;
+            if (t.text == '(') {
+              // if this '(' is preceded by a '#' it is the parameter list;
+              // skip its matching ')' and continue searching for the port list.
+              final prev = (i - 1) >= 0 ? parsed.tokens[i - 1].text : null;
+              if (prev == '#') {
+                // find matching ')' for this parameter list
+                int depthP = 0;
+                for (var j = i; j < parsed.tokens.length; j++) {
+                  final tj = parsed.tokens[j];
+                  if (tj.text == '(') depthP++;
+                  if (tj.text == ')') {
+                    depthP--;
+                    if (depthP <= 0) {
+                      i = j; // advance outer loop
+                      diagnostics.info('ir_builder: skipped parameter list to index $j');
+                      break;
+                    }
+                  }
+                }
+                continue;
+              }
+              parenIndex = i;
+              diagnostics.info('ir_builder: found port-list parenIndex=$parenIndex token=${parsed.tokens[parenIndex].text}');
+              break;
+            }
+        }
+        if (parenIndex >= 0) {
+          // collect simple identifier tokens until matching ')'
+          int depth = 0;
+          for (var i = parenIndex; i < parsed.tokens.length; i++) {
+            final t = parsed.tokens[i];
+            if (t.text == '(') depth++;
+            if (t.text == ')') {
+              depth--;
+              if (depth <= 0) break;
+            }
+            if (t.type == SystemVerilogLexer.TOKEN_SimpleIdentifier ||
+                t.type == SystemVerilogLexer.TOKEN_CIdentifier) {
+              // only accept identifiers that look like port names: the next
+              // significant token should be a comma or closing parenthesis.
+              final nextIdx = i + 1;
+              final nextTok = (nextIdx < parsed.tokens.length) ? parsed.tokens[nextIdx] : null;
+              final nextText = nextTok?.text ?? '';
+              if (nextText == ',' || nextText == ')') {
+                final name = t.text ?? '';
+                if (name.isNotEmpty) headerPortNames.add(name);
+                diagnostics.info('ir_builder: found header ident: $name');
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Default direction map (unknown -> inout). We'll fill directions by scanning module items for port_declaration statements.
+    final directionMap = <String, PortDirection>{};
+    for (final name in headerPortNames)
+      directionMap[name] = PortDirection.inout;
+
+    // Scan module items to find explicit port declarations (input/output/inout).
+    for (final item in moduleContext.module_items()) {
+      final portDecl = item.port_declaration();
+      if (portDecl == null) continue;
+
+      PortDirection? declDir;
+      if (portDecl.input_declaration() != null) declDir = PortDirection.input;
+      if (portDecl.output_declaration() != null) declDir = PortDirection.output;
+      if (portDecl.inout_declaration() != null) declDir = PortDirection.inout;
+
+      final listIds =
+          portDecl.input_declaration()?.list_of_port_identifiers() ??
+              portDecl.output_declaration()?.list_of_port_identifiers() ??
+              portDecl.inout_declaration()?.list_of_port_identifiers();
+
+      if (listIds != null && declDir != null) {
+        for (final pid in listIds.port_identifiers()) {
+          if (pid == null) continue;
+          final ident = pid.identifier();
+          final simple = ident?.SimpleIdentifier();
+          final name = (simple != null && simple.text != null && simple.text!.isNotEmpty)
+              ? simple.text!
+              : pid.identifier()?.SimpleIdentifier()?.text ?? '';
+          if (name.isNotEmpty) directionMap[name] = declDir;
+        }
+      }
+    }
+
+    // Build final PortDeclaration list in header order.
+    final ports = <PortDeclaration>[];
+    for (final name in headerPortNames) {
+      ports.add(PortDeclaration(
+        location: parsed.sourceText.getLocation(0),
+        name: name,
+        direction: directionMap[name] ?? PortDirection.inout,
+      ));
+    }
+
     final items = _convertModuleItems(moduleContext, parsed);
+    diagnostics.info('ir_builder: module="$moduleName" headerPorts=${headerPortNames}');
 
     return ModuleDeclaration(
       location: parsed.sourceText.getLocation(0),
