@@ -9,6 +9,7 @@ import 'common/common.dart';
 import 'codegen/naming_strategy.dart';
 import 'frontend/frontend.dart';
 import 'ir/ir.dart';
+import 'codegen/rohd_generator.dart';
 
 /// Main entry point for sv2rohd.
 class SV2ROHD {
@@ -38,12 +39,11 @@ class SV2ROHD {
     );
     final module = builder.buildModule(parsed);
 
-    // Translate to ROHD
-    final translator = RohdTranslator(namingStrategy: namingStrategy);
-    module.accept(translator);
-
-    // Output
-    final output = translator.output;
+    // Translate to ROHD using the code generator
+    final generator = RohdGenerator(
+      options: GeneratorOptions(namingStrategy: namingStrategy),
+    );
+    final output = generator.generate(module);
 
     if (outputPath != null) {
       _writeFile(outputPath, output);
