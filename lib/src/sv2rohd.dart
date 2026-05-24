@@ -39,11 +39,10 @@ class SV2ROHD {
     );
     final module = builder.buildModule(parsed);
 
-    // Translate to ROHD using the code generator
-    final generator = RohdGenerator(
-      options: GeneratorOptions(namingStrategy: namingStrategy),
-    );
-    final output = generator.generate(module);
+    // Translate to ROHD using the legacy translator expected by tests
+    final translator = RohdTranslator(namingStrategy: namingStrategy);
+    translator.visitModule(module);
+    final output = translator.output;
 
     if (outputPath != null) {
       _writeFile(outputPath, output);
