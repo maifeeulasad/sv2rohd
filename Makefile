@@ -37,6 +37,7 @@ upgrade-deps: ## Upgrade all dependencies
 download-rohd:
 	@echo "Downloading ROHD package..."
 	@git clone https://github.com/maifeeulasad/rohd.git
+	@git clone https://github.com/intel/rohd-cosim.git
 	@echo "✓ ROHD package downloaded"
 
 ##@ Building
