@@ -44,12 +44,14 @@ build-grammar: ## Build ANTLR grammar files
 	@echo "Building grammar files..."
 	@rm -rf lib/generated/grammar
 	@$(DART) pub run build_runner build --delete-conflicting-outputs
+	@make format
 	@echo "✓ Grammar files built"
 
 antlr-grammar:
 	@echo "Generating ANTLR grammar files..."
 	@rm -rf lib/generated/grammar
 	@java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -o lib/generated grammar/SystemVerilogLexer.g4 && java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -lib lib/generated/grammar -o lib/generated grammar/SystemVerilogParser.g4
+	@make format
 	@echo "✓ ANTLR grammar files generated"
 
 glue-grammar:
@@ -57,6 +59,7 @@ glue-grammar:
 	@rm -rf lib/generated/grammar
 	@java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -o lib/generated grammar/SystemVerilogLexer.g4
 	@java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -lib lib/generated/grammar -o lib/generated grammar/SystemVerilogParser.g4
+	@make format
 	@echo "✓ Glue code generated"
 
 compile: setup ## Compile the project to executable
