@@ -28,10 +28,12 @@ void main() {
 
       expect(outputFile.existsSync(), isTrue);
       expect(output, contains('class Adder extends Module'));
-      expect(output, contains("definePort('clk', clk)"));
+      expect(output, contains("addInput('clk', clkSource"));
+      expect(output, contains("addOutput('sum'"));
+      expect(output, contains('Sequential(clk'));
       expect(output, contains('If(~rstN'));
-      expect(output, contains('sum <= (a + b);'));
-      expect(output, contains('ready <= 1;'));
+      expect(output, contains('sum < (a + b)'));
+      expect(output, contains('ready < 1'));
     });
 
     test('alu emits combinational case logic and generate summary', () {
@@ -45,11 +47,12 @@ void main() {
 
       expect(outputFile.existsSync(), isTrue);
       expect(output, contains('class Alu extends Module'));
-      expect(output, contains('Logic stage'));
-      expect(output, contains('Logic validPipe'));
+      expect(output, contains('late final Logic stage'));
+      expect(output, contains('late final Logic validPipe'));
+      expect(output, contains('Combinational(['));
       expect(output, contains('Case(op'));
       expect(output, contains('// for-generate pipe_stage over DEPTH'));
-      expect(output, contains('overflow = 0;'));
+      expect(output, contains('overflow <= Const(0'));
     });
 
     test('multiplier emits sequential logic and product assignment', () {
@@ -63,11 +66,12 @@ void main() {
 
       expect(outputFile.existsSync(), isTrue);
       expect(output, contains('class Multiplier extends Module'));
-      expect(output, contains('Logic counter'));
-      expect(output, contains('Logic partial'));
-      expect(output, contains('Logic resultReg'));
+      expect(output, contains('late final Logic counter'));
+      expect(output, contains('late final Logic partial'));
+      expect(output, contains('late final Logic resultReg'));
+      expect(output, contains('Sequential(clk'));
       expect(output, contains('If(~rstN'));
-      expect(output, contains('product = resultReg;'));
+      expect(output, contains('product <= resultReg;'));
     });
   });
 }
