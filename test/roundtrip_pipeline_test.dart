@@ -98,9 +98,8 @@ String _buildDriver(
   String rohdFile,
 ) {
   final className = namingStrategy.toClassName(module.name);
-  final inputs = module.ports
-      .where((p) => p.direction != PortDirection.output)
-      .toList();
+  final inputs =
+      module.ports.where((p) => p.direction != PortDirection.output).toList();
 
   final inputDecls = inputs.map((port) {
     final name = namingStrategy.toCamelCase(port.name);
@@ -108,9 +107,7 @@ String _buildDriver(
     return "  final $name = Logic(name: '$name', width: $width);";
   }).join('\n');
 
-  final args = inputs
-      .map((p) => namingStrategy.toCamelCase(p.name))
-      .join(', ');
+  final args = inputs.map((p) => namingStrategy.toCamelCase(p.name)).join(', ');
 
   return '''import 'package:rohd/rohd.dart';
 import '$rohdFile';
