@@ -18,6 +18,7 @@ class StatementGenerator {
   final ExpressionGenerator exprGen;
   final NamingStrategy namingStrategy;
   int _indentLevel = 0;
+  bool _asListItem = false;
 
   StatementGenerator({
     required this.exprGen,
@@ -25,7 +26,13 @@ class StatementGenerator {
   });
 
   /// Generate a statement.
-  void generate(StringBuffer buffer, IrStatement stmt) {
+  void generate(
+    StringBuffer buffer,
+    IrStatement stmt, {
+    bool asListItem = false,
+  }) {
+    final previous = _asListItem;
+    _asListItem = asListItem;
     if (stmt is AssignmentStatement) {
       _generateAssignment(buffer, stmt);
     } else if (stmt is IfStatement) {
@@ -53,24 +60,26 @@ class StatementGenerator {
     } else if (stmt is NonBlockingAssignmentStatement) {
       _generateNonBlockingAssignment(buffer, stmt);
     }
+    _asListItem = previous;
   }
 
   void _generateAssignment(StringBuffer buffer, AssignmentStatement stmt) {
     final target = exprGen.generate(stmt.target);
     final value = exprGen.generate(stmt.value);
+    final suffix = _asListItem ? ',' : ';';
 
     switch (stmt.type) {
       case AssignmentType.blocking:
-        _writeLine(buffer, '$target < $value;');
+        _writeLine(buffer, '$target < $value$suffix');
         break;
       case AssignmentType.nonBlocking:
-        _writeLine(buffer, '$target <= $value;');
+        _writeLine(buffer, '$target < $value$suffix');
         break;
       case AssignmentType.continuous:
-        _writeLine(buffer, '$target <= $value;');
+        _writeLine(buffer, '$target <= $value$suffix');
         break;
       case AssignmentType.procedural:
-        _writeLine(buffer, '$target < $value;');
+        _writeLine(buffer, '$target < $value$suffix');
         break;
     }
   }
@@ -81,7 +90,8 @@ class StatementGenerator {
   ) {
     final target = exprGen.generate(stmt.target);
     final value = exprGen.generate(stmt.value);
-    _writeLine(buffer, '$target < $value;');
+    final suffix = _asListItem ? ',' : ';';
+    _writeLine(buffer, '$target < $value$suffix');
   }
 
   void _generateNonBlockingAssignment(
@@ -90,7 +100,8 @@ class StatementGenerator {
   ) {
     final target = exprGen.generate(stmt.target);
     final value = exprGen.generate(stmt.value);
-    _writeLine(buffer, '$target <= $value;');
+    final suffix = _asListItem ? ',' : ';';
+    _writeLine(buffer, '$target < $value$suffix');
   }
 
   void _generateIfStatement(StringBuffer buffer, IfStatement stmt) {
@@ -100,25 +111,26 @@ class StatementGenerator {
     _indent();
 
     for (final s in _flattenBlock(stmt.thenBranch)) {
-      generate(buffer, s);
+      generate(buffer, s, asListItem: true);
     }
 
     _dedent();
     _write(buffer, ']');
 
     if (stmt.elseBranch != null) {
-      _write(buffer, ', else: [');
+      _write(buffer, ', orElse: [');
       _indent();
 
       for (final s in _flattenBlock(stmt.elseBranch!)) {
-        generate(buffer, s);
+        generate(buffer, s, asListItem: true);
       }
 
       _dedent();
       _write(buffer, ']');
     }
 
-    _writeLine(buffer, '),');
+    final suffix = _asListItem ? '),' : ');';
+    _writeLine(buffer, suffix);
   }
 
   void _generateCaseStatement(StringBuffer buffer, CaseStatement stmt) {
@@ -129,33 +141,42 @@ class StatementGenerator {
     _indent();
 
     for (final item in stmt.items) {
-      _generateCaseItem(buffer, item);
-    }
-
-    // Handle default case
-    if (stmt.defaultCase != null) {
-      _writeLine(buffer, 'CaseItem(null, ['); // Default case
-      _indent();
-      for (final s in _flattenBlock(stmt.defaultCase!)) {
-        generate(buffer, s);
-      }
-      _dedent();
-      _writeLine(buffer, ']),');
+      _generateCaseItem(buffer, item, selector);
     }
 
     _dedent();
-    _writeLine(buffer, ']),');
+
+    if (stmt.defaultCase != null) {
+      _writeLine(buffer, '], defaultItem: [');
+      _indent();
+      for (final s in _flattenBlock(stmt.defaultCase!)) {
+        generate(buffer, s, asListItem: true);
+      }
+      _dedent();
+      final suffix = _asListItem ? ']),' : ']);';
+      _writeLine(buffer, suffix);
+    } else {
+      final suffix = _asListItem ? ']),' : ']);';
+      _writeLine(buffer, suffix);
+    }
   }
 
-  void _generateCaseItem(StringBuffer buffer, CaseItem item) {
+  void _generateCaseItem(
+    StringBuffer buffer,
+    CaseItem item,
+    String selector,
+  ) {
     for (final value in item.values) {
       final val = exprGen.generate(value);
-      _writeLine(buffer, 'CaseItem($val, [');
+      final caseValue = value is LiteralExpression
+          ? 'Const($val, width: $selector.width)'
+          : val;
+      _writeLine(buffer, 'CaseItem($caseValue, [');
       _indent();
 
       if (item.statement != null) {
         for (final s in _flattenBlock(item.statement!)) {
-          generate(buffer, s);
+          generate(buffer, s, asListItem: true);
         }
       }
 
