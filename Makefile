@@ -79,6 +79,11 @@ test: ## Run all tests
 	@$(DART) test
 	@echo "✓ Tests completed"
 
+roundtrip: ## Run SV->ROHD->SV roundtrip tests
+	@echo "Running roundtrip pipeline tests..."
+	@$(DART) test test/roundtrip_pipeline_test.dart
+	@echo "✓ Roundtrip pipeline tests completed"
+
 test-watch: ## Run tests in watch mode
 	@echo "Running tests in watch mode..."
 	@$(DART) test --watch
