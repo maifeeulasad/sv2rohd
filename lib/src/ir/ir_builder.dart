@@ -94,7 +94,9 @@ class IrBuilder {
         if (idCtx != null) {
           final ident = idCtx.identifier();
           final simple = ident?.SimpleIdentifier();
-          if (simple != null && simple.text != null && simple.text!.isNotEmpty) {
+          if (simple != null &&
+              simple.text != null &&
+              simple.text!.isNotEmpty) {
             moduleName = simple.text!;
           } else {
             moduleName = idCtx.identifier()?.SimpleIdentifier()?.text ?? '';
@@ -110,7 +112,8 @@ class IrBuilder {
     if ((moduleName.isEmpty || moduleName == 'unnamed_module') &&
         parsed.tokens.isNotEmpty) {
       final startIdx = moduleContext.start?.startIndex ?? 0;
-      final stopIdx = moduleContext.stop?.stopIndex ?? parsed.sourceText.text.length - 1;
+      final stopIdx =
+          moduleContext.stop?.stopIndex ?? parsed.sourceText.text.length - 1;
       for (var i = 0; i < parsed.tokens.length - 1; i++) {
         final t = parsed.tokens[i];
         if (t.startIndex >= startIdx && t.stopIndex <= stopIdx) {
@@ -144,9 +147,11 @@ class IrBuilder {
               if (pid != null) {
                 final ident = pid.identifier();
                 final simple = ident?.SimpleIdentifier();
-                final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
-                  ? simple.text!
-                  : pid.identifier()?.SimpleIdentifier()?.text ?? '';
+                final pName = (simple != null &&
+                        simple.text != null &&
+                        simple.text!.isNotEmpty)
+                    ? simple.text!
+                    : pid.identifier()?.SimpleIdentifier()?.text ?? '';
                 if (!headerPortNames.contains(pName)) {
                   headerPortNames.add(pName);
                 }
@@ -157,7 +162,9 @@ class IrBuilder {
             if (pid != null) {
               final ident = pid.identifier();
               final simple = ident?.SimpleIdentifier();
-                final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
+              final pName = (simple != null &&
+                      simple.text != null &&
+                      simple.text!.isNotEmpty)
                   ? simple.text!
                   : pid.identifier()?.SimpleIdentifier()?.text ?? '';
               if (!headerPortNames.contains(pName)) {
@@ -175,7 +182,9 @@ class IrBuilder {
           if (pid != null) {
             final ident = pid.identifier();
             final simple = ident?.SimpleIdentifier();
-            final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
+            final pName = (simple != null &&
+                    simple.text != null &&
+                    simple.text!.isNotEmpty)
                 ? simple.text!
                 : pid.identifier()?.SimpleIdentifier()?.text ?? '';
             if (!headerPortNames.contains(pName)) {
@@ -202,7 +211,8 @@ class IrBuilder {
       final existing = headerPortNames.toSet();
       // find module token index within moduleContext range
       final startIdx = moduleContext.start?.startIndex ?? 0;
-      final stopIdx = moduleContext.stop?.stopIndex ?? parsed.sourceText.text.length - 1;
+      final stopIdx =
+          moduleContext.stop?.stopIndex ?? parsed.sourceText.text.length - 1;
       int moduleTokenIndex = -1;
       for (var i = 0; i < parsed.tokens.length; i++) {
         final t = parsed.tokens[i];
@@ -215,122 +225,129 @@ class IrBuilder {
         }
       }
       if (moduleTokenIndex >= 0) {
-          diagnostics.info('ir_builder: moduleTokenIndex=$moduleTokenIndex token=${parsed.tokens[moduleTokenIndex].text}');
+        diagnostics.info(
+            'ir_builder: moduleTokenIndex=$moduleTokenIndex token=${parsed.tokens[moduleTokenIndex].text}');
         // find the '(' after moduleTokenIndex
         int parenIndex = -1;
         for (var i = moduleTokenIndex + 1; i < parsed.tokens.length; i++) {
           final t = parsed.tokens[i];
           if (t.startIndex > stopIdx) break;
-            if (t.text == '(') {
-              // if this '(' is preceded by a '#' it is the parameter list;
-              // skip its matching ')' and continue searching for the port list.
-              final prev = (i - 1) >= 0 ? parsed.tokens[i - 1].text : null;
-              if (prev == '#') {
-                // find matching ')' for this parameter list
-                int depthP = 0;
-                for (var j = i; j < parsed.tokens.length; j++) {
-                  final tj = parsed.tokens[j];
-                  if (tj.text == '(') depthP++;
-                  if (tj.text == ')') {
-                    depthP--;
-                    if (depthP <= 0) {
-                      i = j; // advance outer loop
-                      diagnostics.info('ir_builder: skipped parameter list to index $j');
-                      break;
-                    }
+          if (t.text == '(') {
+            // if this '(' is preceded by a '#' it is the parameter list;
+            // skip its matching ')' and continue searching for the port list.
+            final prev = (i - 1) >= 0 ? parsed.tokens[i - 1].text : null;
+            if (prev == '#') {
+              // find matching ')' for this parameter list
+              int depthP = 0;
+              for (var j = i; j < parsed.tokens.length; j++) {
+                final tj = parsed.tokens[j];
+                if (tj.text == '(') depthP++;
+                if (tj.text == ')') {
+                  depthP--;
+                  if (depthP <= 0) {
+                    i = j; // advance outer loop
+                    diagnostics
+                        .info('ir_builder: skipped parameter list to index $j');
+                    break;
                   }
                 }
-                continue;
               }
-              parenIndex = i;
-              diagnostics.info('ir_builder: found port-list parenIndex=$parenIndex token=${parsed.tokens[parenIndex].text}');
-              break;
+              continue;
             }
+            parenIndex = i;
+            diagnostics.info(
+                'ir_builder: found port-list parenIndex=$parenIndex token=${parsed.tokens[parenIndex].text}');
+            break;
+          }
         }
-if (parenIndex >= 0) {
-           // collect simple identifier tokens until matching ')'
-           int depth = 0;
-           PortDirection? activeDirection;
-           String? pendingWidth;
-           for (var i = parenIndex; i < parsed.tokens.length; i++) {
-             final t = parsed.tokens[i];
-             if (t.text == '(') depth++;
-             if (t.text == ')') {
-               depth--;
-               if (depth <= 0) break;
-             }
-             final lower = (t.text ?? '').toLowerCase();
-             if (lower == 'input') {
-               activeDirection = PortDirection.input;
-             } else if (lower == 'output') {
-               activeDirection = PortDirection.output;
-             } else if (lower == 'inout') {
-               activeDirection = PortDirection.inout;
-             }
-             // Check for width specification [X:Y] or [X]
-             if (t.text == '[') {
-               // Collect tokens until ] for width spec
-               final widthTokens = <String>[];
-               int widthDepth = 1;
-               for (var j = i + 1; j < parsed.tokens.length; j++) {
-                 final wt = parsed.tokens[j];
-                 if (wt.text == '[') widthDepth++;
-                 if (wt.text == ']') {
-                   widthDepth--;
-                   if (widthDepth <= 0) {
-                     pendingWidth = widthTokens.join(' ').trim();
-                     break;
-                   }
-                 }
-                 if (widthDepth > 0) {
-                   widthTokens.add(wt.text ?? '');
-                 }
-               }
-             }
-             final name = t.text ?? '';
-             if (name.isNotEmpty && _isIdentifierToken(name)) {
-               // only accept identifiers that look like port names: the next
-               // significant token should be a comma or closing parenthesis.
-               final nextIdx = i + 1;
-               final nextTok = (nextIdx < parsed.tokens.length) ? parsed.tokens[nextIdx] : null;
-               final nextText = nextTok?.text ?? '';
-               if (nextText == ',' || nextText == ')') {
-                 if (!existing.contains(name)) {
-                   headerPortNames.add(name);
-                   existing.add(name);
-                 }
-                 if (activeDirection != null) {
-                   directionMap[name] = activeDirection!;
-                 }
-                 // Store width if available
-                 if (pendingWidth != null && pendingWidth.contains(':')) {
-                   final parts = pendingWidth.split(':').map((p) => p.trim()).toList();
-                   if (parts.length == 2) {
-                     widthMap[name] = VectorWidth(
-                       location: parsed.sourceText.getLocation(0),
-                       msb: _parseExpressionText(parts[0], parsed),
-                       lsb: _parseExpressionText(parts[1], parsed),
-                     );
-                   }
-                   pendingWidth = null;
-                 } else if (pendingWidth != null) {
-                   // Single dimension like [7]
-                   widthMap[name] = VectorWidth(
-                     location: parsed.sourceText.getLocation(0),
-                     msb: _parseExpressionText(pendingWidth, parsed),
-                     lsb: LiteralExpression(
-                       location: parsed.sourceText.getLocation(0),
-                       kind: LiteralKind.integer,
-                       value: 0,
-                     ),
-                   );
-                   pendingWidth = null;
-                 }
-                 diagnostics.info('ir_builder: found header ident: $name width=$pendingWidth');
-               }
-             }
-           }
-         }
+        if (parenIndex >= 0) {
+          // collect simple identifier tokens until matching ')'
+          int depth = 0;
+          PortDirection? activeDirection;
+          String? pendingWidth;
+          for (var i = parenIndex; i < parsed.tokens.length; i++) {
+            final t = parsed.tokens[i];
+            if (t.text == '(') depth++;
+            if (t.text == ')') {
+              depth--;
+              if (depth <= 0) break;
+            }
+            final lower = (t.text ?? '').toLowerCase();
+            if (lower == 'input') {
+              activeDirection = PortDirection.input;
+            } else if (lower == 'output') {
+              activeDirection = PortDirection.output;
+            } else if (lower == 'inout') {
+              activeDirection = PortDirection.inout;
+            }
+            // Check for width specification [X:Y] or [X]
+            if (t.text == '[') {
+              // Collect tokens until ] for width spec
+              final widthTokens = <String>[];
+              int widthDepth = 1;
+              for (var j = i + 1; j < parsed.tokens.length; j++) {
+                final wt = parsed.tokens[j];
+                if (wt.text == '[') widthDepth++;
+                if (wt.text == ']') {
+                  widthDepth--;
+                  if (widthDepth <= 0) {
+                    pendingWidth = widthTokens.join(' ').trim();
+                    break;
+                  }
+                }
+                if (widthDepth > 0) {
+                  widthTokens.add(wt.text ?? '');
+                }
+              }
+            }
+            final name = t.text ?? '';
+            if (name.isNotEmpty && _isIdentifierToken(name)) {
+              // only accept identifiers that look like port names: the next
+              // significant token should be a comma or closing parenthesis.
+              final nextIdx = i + 1;
+              final nextTok = (nextIdx < parsed.tokens.length)
+                  ? parsed.tokens[nextIdx]
+                  : null;
+              final nextText = nextTok?.text ?? '';
+              if (nextText == ',' || nextText == ')') {
+                if (!existing.contains(name)) {
+                  headerPortNames.add(name);
+                  existing.add(name);
+                }
+                if (activeDirection != null) {
+                  directionMap[name] = activeDirection!;
+                }
+                // Store width if available
+                if (pendingWidth != null && pendingWidth.contains(':')) {
+                  final parts =
+                      pendingWidth.split(':').map((p) => p.trim()).toList();
+                  if (parts.length == 2) {
+                    widthMap[name] = VectorWidth(
+                      location: parsed.sourceText.getLocation(0),
+                      msb: _parseExpressionText(parts[0], parsed),
+                      lsb: _parseExpressionText(parts[1], parsed),
+                    );
+                  }
+                  pendingWidth = null;
+                } else if (pendingWidth != null) {
+                  // Single dimension like [7]
+                  widthMap[name] = VectorWidth(
+                    location: parsed.sourceText.getLocation(0),
+                    msb: _parseExpressionText(pendingWidth, parsed),
+                    lsb: LiteralExpression(
+                      location: parsed.sourceText.getLocation(0),
+                      kind: LiteralKind.integer,
+                      value: 0,
+                    ),
+                  );
+                  pendingWidth = null;
+                }
+                diagnostics.info(
+                    'ir_builder: found header ident: $name width=$pendingWidth');
+              }
+            }
+          }
+        }
       }
     }
 
@@ -359,9 +376,10 @@ if (parenIndex >= 0) {
           if (pid == null) continue;
           final ident = pid.identifier();
           final simple = ident?.SimpleIdentifier();
-          final name = (simple != null && simple.text != null && simple.text!.isNotEmpty)
-              ? simple.text!
-              : pid.identifier()?.SimpleIdentifier()?.text ?? '';
+          final name =
+              (simple != null && simple.text != null && simple.text!.isNotEmpty)
+                  ? simple.text!
+                  : pid.identifier()?.SimpleIdentifier()?.text ?? '';
           if (name.isNotEmpty) directionMap[name] = declDir;
         }
       }
@@ -379,7 +397,8 @@ if (parenIndex >= 0) {
     }
 
     final items = _convertModuleItems(moduleContext, parsed);
-    diagnostics.info('ir_builder: module="$moduleName" headerPorts=${headerPortNames}');
+    diagnostics.info(
+        'ir_builder: module="$moduleName" headerPorts=${headerPortNames}');
 
     return ModuleDeclaration(
       location: parsed.sourceText.getLocation(0),
@@ -395,7 +414,7 @@ if (parenIndex >= 0) {
     final dirText = decl.port_direction()?.text ??
         decl.net_port_header()?.port_direction()?.text ??
         decl.variable_port_header()?.port_direction()?.text;
-switch (dirText) {
+    switch (dirText) {
       case 'input':
         return PortDirection.input;
       case 'output':
@@ -477,10 +496,10 @@ switch (dirText) {
     // packed_dimension has either constant_range or unsized_dimension
     final constantRange = packedDim.constant_range();
     if (constantRange != null) {
-      final msbExpr = _parseConstantRangeExpression(
-          constantRange.constant_expression(0));
-      final lsbExpr = _parseConstantRangeExpression(
-          constantRange.constant_expression(1));
+      final msbExpr =
+          _parseConstantRangeExpression(constantRange.constant_expression(0));
+      final lsbExpr =
+          _parseConstantRangeExpression(constantRange.constant_expression(1));
       return VectorWidth(
         location: SourceLocation.dummy(),
         msb: msbExpr,
@@ -490,7 +509,7 @@ switch (dirText) {
     return null;
   }
 
-IrExpression _parseConstantRangeExpression(
+  IrExpression _parseConstantRangeExpression(
     dynamic expr,
   ) {
     if (expr == null) {
@@ -539,7 +558,7 @@ IrExpression _parseConstantRangeExpression(
     return [expr.substring(0, idx), expr.substring(idx + 1)];
   }
 
-IrExpression _parseSimpleExpression(String text) {
+  IrExpression _parseSimpleExpression(String text) {
     final trimmed = text.trim();
     final integer = int.tryParse(trimmed);
     if (integer != null) {
