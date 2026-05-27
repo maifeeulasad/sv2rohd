@@ -1,0 +1,304 @@
+// Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
+// SPDX-License-Identifier: BSD-3-Clause
+
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+import 'package:test/test.dart';
+
+import 'package:sv2rohd/sv2rohd.dart';
+
+class _Fixture {
+  final String name;
+  final String path;
+
+  const _Fixture(this.name, this.path);
+}
+
+void main() {
+  group('roundtrip pipeline', () {
+    final fixtures = <_Fixture>[
+      const _Fixture('adder', 'fixtures/sv_samples/adder.sv'),
+      const _Fixture('alu', 'fixtures/sv_samples/alu.sv'),
+      const _Fixture('multiplier', 'fixtures/sv_samples/multiplier.sv'),
+    ];
+
+    for (final fixture in fixtures) {
+      test('${fixture.name} sv->rohd->sv', () async {
+        final runDir = _createRunDir(fixture.name);
+        addTearDown(() {
+          if (runDir.existsSync()) {
+            runDir.deleteSync(recursive: true);
+          }
+        });
+
+        final namingStrategy = const NamingStrategy();
+        final diagnostics = DiagnosticCollector();
+        final frontend = Frontend(diagnostics: diagnostics);
+        final parsed = frontend.parseFile(fixture.path);
+        final builder = IrBuilder(
+          diagnostics: diagnostics,
+          namingStrategy: namingStrategy,
+        );
+        final module = builder.buildModule(parsed);
+
+        final rohdPath = p.join(runDir.path, '${fixture.name}.dart');
+        final converter = SV2ROHD(namingStrategy: namingStrategy);
+        converter.convert(fixture.path, outputPath: rohdPath);
+
+        final driverPath = p.join(runDir.path, '${fixture.name}_driver.dart');
+        final driverSource = _buildDriver(
+          module,
+          namingStrategy,
+          p.basename(rohdPath),
+        );
+        File(driverPath).writeAsStringSync(driverSource);
+
+        final driverRelative =
+            p.relative(driverPath, from: Directory.current.path);
+        final result = await Process.run(
+          'dart',
+          ['run', driverRelative],
+          workingDirectory: Directory.current.path,
+        );
+
+        expect(
+          result.exitCode,
+          0,
+          reason: result.stderr.toString(),
+        );
+
+        final generatedSv = result.stdout.toString();
+        _assertSimilarity(module, generatedSv);
+      });
+    }
+  });
+}
+
+Directory _createRunDir(String name) {
+  final root = Directory(p.join(
+    Directory.current.path,
+    '.dart_tool',
+    'sv2rohd_roundtrip',
+  ));
+  if (!root.existsSync()) {
+    root.createSync(recursive: true);
+  }
+  final dir = Directory(p.join(
+    root.path,
+    '${name}_${DateTime.now().microsecondsSinceEpoch}',
+  ));
+  dir.createSync(recursive: true);
+  return dir;
+}
+
+String _buildDriver(
+  ModuleDeclaration module,
+  NamingStrategy namingStrategy,
+  String rohdFile,
+) {
+  final className = namingStrategy.toClassName(module.name);
+  final inputs = module.ports
+      .where((p) => p.direction != PortDirection.output)
+      .toList();
+
+  final inputDecls = inputs.map((port) {
+    final name = namingStrategy.toCamelCase(port.name);
+    final width = _widthFromVector(port.width);
+    return "  final $name = Logic(name: '$name', width: $width);";
+  }).join('\n');
+
+  final args = inputs
+      .map((p) => namingStrategy.toCamelCase(p.name))
+      .join(', ');
+
+  return '''import 'package:rohd/rohd.dart';
+import '$rohdFile';
+
+Future<void> main() async {
+$inputDecls
+  final dut = $className($args);
+  await dut.build();
+  print(dut.generateSynth());
+}
+''';
+}
+
+int _widthFromVector(VectorWidth? width) {
+  if (width == null) return 1;
+  if (width.msb is LiteralExpression && width.lsb is LiteralExpression) {
+    final msb = (width.msb as LiteralExpression).value as int;
+    final lsb = (width.lsb as LiteralExpression).value as int;
+    return (msb - lsb).abs() + 1;
+  }
+  // For parameterized widths like WIDTH-1:0, default to 8
+  return 8;
+}
+
+void _assertSimilarity(ModuleDeclaration module, String sv) {
+  final className = const NamingStrategy().toClassName(module.name);
+  final moduleNamePattern = RegExp(
+    'module\\s+(${RegExp.escape(module.name)}|${RegExp.escape(className)})\\b',
+    caseSensitive: false,
+  );
+  expect(moduleNamePattern.hasMatch(sv), isTrue);
+
+  for (final port in module.ports) {
+    final portPattern = RegExp('\\b${RegExp.escape(port.name)}\\b');
+    expect(portPattern.hasMatch(sv), isTrue);
+  }
+
+  if (_hasSequential(module)) {
+    expect(sv.contains('always_ff'), isTrue);
+  }
+
+  if (_hasCombinational(module)) {
+    expect(sv.contains('always_comb'), isTrue);
+  }
+
+  if (_hasCase(module)) {
+    expect(RegExp('\\bcase\\b').hasMatch(sv), isTrue);
+  }
+}
+
+bool _hasSequential(ModuleDeclaration module) {
+  for (final item in module.items) {
+    if (item is AlwaysBlock && item.kind == BlockKind.alwaysFf) {
+      return true;
+    }
+    if (item is IrStatement && _containsNonBlocking(item)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _hasCombinational(ModuleDeclaration module) {
+  for (final item in module.items) {
+    if (item is AlwaysBlock && item.kind == BlockKind.alwaysComb) {
+      return true;
+    }
+    if (item is IrStatement && !_containsNonBlocking(item)) {
+      if (_containsBlocking(item)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool _hasCase(ModuleDeclaration module) {
+  for (final item in module.items) {
+    if (item is CaseStatement) {
+      return true;
+    }
+    if (item is IrStatement && _containsCase(item)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _containsNonBlocking(IrStatement stmt) {
+  if (stmt is AssignmentStatement) {
+    return stmt.type == AssignmentType.nonBlocking;
+  }
+  if (stmt is NonBlockingAssignmentStatement) {
+    return true;
+  }
+  if (stmt is IfStatement) {
+    return _containsNonBlocking(stmt.thenBranch) ||
+        (stmt.elseBranch != null && _containsNonBlocking(stmt.elseBranch!));
+  }
+  if (stmt is CaseStatement) {
+    for (final item in stmt.items) {
+      if (item.statement != null && _containsNonBlocking(item.statement!)) {
+        return true;
+      }
+    }
+    if (stmt.defaultCase != null) {
+      return _containsNonBlocking(stmt.defaultCase!);
+    }
+  }
+  if (stmt is SequentialBlock) {
+    for (final s in stmt.statements) {
+      if (_containsNonBlocking(s)) {
+        return true;
+      }
+    }
+  }
+  if (stmt is ForLoopStatement) {
+    return _containsNonBlocking(stmt.body) ||
+        (stmt.initialization != null &&
+            _containsNonBlocking(stmt.initialization!)) ||
+        (stmt.step != null && _containsNonBlocking(stmt.step!));
+  }
+  if (stmt is WhileLoopStatement) {
+    return _containsNonBlocking(stmt.body);
+  }
+  return false;
+}
+
+bool _containsBlocking(IrStatement stmt) {
+  if (stmt is AssignmentStatement) {
+    return stmt.type == AssignmentType.blocking;
+  }
+  if (stmt is BlockingAssignmentStatement) {
+    return true;
+  }
+  if (stmt is IfStatement) {
+    return _containsBlocking(stmt.thenBranch) ||
+        (stmt.elseBranch != null && _containsBlocking(stmt.elseBranch!));
+  }
+  if (stmt is CaseStatement) {
+    for (final item in stmt.items) {
+      if (item.statement != null && _containsBlocking(item.statement!)) {
+        return true;
+      }
+    }
+    if (stmt.defaultCase != null) {
+      return _containsBlocking(stmt.defaultCase!);
+    }
+  }
+  if (stmt is SequentialBlock) {
+    for (final s in stmt.statements) {
+      if (_containsBlocking(s)) {
+        return true;
+      }
+    }
+  }
+  if (stmt is ForLoopStatement) {
+    return _containsBlocking(stmt.body) ||
+        (stmt.initialization != null &&
+            _containsBlocking(stmt.initialization!)) ||
+        (stmt.step != null && _containsBlocking(stmt.step!));
+  }
+  if (stmt is WhileLoopStatement) {
+    return _containsBlocking(stmt.body);
+  }
+  return false;
+}
+
+bool _containsCase(IrStatement stmt) {
+  if (stmt is CaseStatement) {
+    return true;
+  }
+  if (stmt is IfStatement) {
+    return _containsCase(stmt.thenBranch) ||
+        (stmt.elseBranch != null && _containsCase(stmt.elseBranch!));
+  }
+  if (stmt is SequentialBlock) {
+    for (final s in stmt.statements) {
+      if (_containsCase(s)) {
+        return true;
+      }
+    }
+  }
+  if (stmt is ForLoopStatement) {
+    return _containsCase(stmt.body);
+  }
+  if (stmt is WhileLoopStatement) {
+    return _containsCase(stmt.body);
+  }
+  return false;
+}
