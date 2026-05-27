@@ -10,7 +10,6 @@ import '../codegen/statement_generator.dart';
 import '../codegen/generate_block_generator.dart';
 import '../codegen/signal_generator.dart';
 import 'package:sv2rohd/generated/grammar/SystemVerilogParser.dart';
-import 'package:sv2rohd/generated/grammar/SystemVerilogLexer.dart';
 import 'ir_node.dart';
 import 'expression_ir.dart';
 import 'statement_ir.dart';
@@ -131,6 +130,8 @@ class IrBuilder {
 
     // First extract declared port names from the header.
     final headerPortNames = <String>[];
+    final directionMap = <String, PortDirection>{};
+    final widthMap = <String, VectorWidth>{};
 
     if (nonansiHeader != null) {
       final portList = nonansiHeader.list_of_ports();
@@ -146,7 +147,9 @@ class IrBuilder {
                 final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
                   ? simple.text!
                   : pid.identifier()?.SimpleIdentifier()?.text ?? '';
-                headerPortNames.add(pName);
+                if (!headerPortNames.contains(pName)) {
+                  headerPortNames.add(pName);
+                }
               }
             }
           } else {
@@ -157,7 +160,9 @@ class IrBuilder {
                 final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
                   ? simple.text!
                   : pid.identifier()?.SimpleIdentifier()?.text ?? '';
-              headerPortNames.add(pName);
+              if (!headerPortNames.contains(pName)) {
+                headerPortNames.add(pName);
+              }
             }
           }
         }
@@ -173,7 +178,18 @@ class IrBuilder {
             final pName = (simple != null && simple.text != null && simple.text!.isNotEmpty)
                 ? simple.text!
                 : pid.identifier()?.SimpleIdentifier()?.text ?? '';
-            headerPortNames.add(pName);
+            if (!headerPortNames.contains(pName)) {
+              headerPortNames.add(pName);
+            }
+            final dir = _directionFromAnsiPortDecl(decl);
+            if (dir != null) {
+              directionMap[pName] = dir;
+            }
+            // Extract width from the port declaration
+            final width = _extractWidthFromAnsiPortDecl(decl);
+            if (width != null) {
+              widthMap[pName] = width;
+            }
           }
         }
       }
@@ -182,7 +198,8 @@ class IrBuilder {
     // attempt a token-stream based header scan: find the '(' after the
     // module name and collect `SimpleIdentifier` tokens until the closing
     // ')'. This uses lexer tokens (parser-driven) rather than regex.
-    if (headerPortNames.isEmpty && parsed.tokens.isNotEmpty) {
+    if (parsed.tokens.isNotEmpty) {
+      final existing = headerPortNames.toSet();
       // find module token index within moduleContext range
       final startIdx = moduleContext.start?.startIndex ?? 0;
       final stopIdx = moduleContext.stop?.stopIndex ?? parsed.sourceText.text.length - 1;
@@ -230,38 +247,97 @@ class IrBuilder {
               break;
             }
         }
-        if (parenIndex >= 0) {
-          // collect simple identifier tokens until matching ')'
-          int depth = 0;
-          for (var i = parenIndex; i < parsed.tokens.length; i++) {
-            final t = parsed.tokens[i];
-            if (t.text == '(') depth++;
-            if (t.text == ')') {
-              depth--;
-              if (depth <= 0) break;
-            }
-            if (t.type == SystemVerilogLexer.TOKEN_SimpleIdentifier ||
-                t.type == SystemVerilogLexer.TOKEN_CIdentifier) {
-              // only accept identifiers that look like port names: the next
-              // significant token should be a comma or closing parenthesis.
-              final nextIdx = i + 1;
-              final nextTok = (nextIdx < parsed.tokens.length) ? parsed.tokens[nextIdx] : null;
-              final nextText = nextTok?.text ?? '';
-              if (nextText == ',' || nextText == ')') {
-                final name = t.text ?? '';
-                if (name.isNotEmpty) headerPortNames.add(name);
-                diagnostics.info('ir_builder: found header ident: $name');
-              }
-            }
-          }
-        }
+if (parenIndex >= 0) {
+           // collect simple identifier tokens until matching ')'
+           int depth = 0;
+           PortDirection? activeDirection;
+           String? pendingWidth;
+           for (var i = parenIndex; i < parsed.tokens.length; i++) {
+             final t = parsed.tokens[i];
+             if (t.text == '(') depth++;
+             if (t.text == ')') {
+               depth--;
+               if (depth <= 0) break;
+             }
+             final lower = (t.text ?? '').toLowerCase();
+             if (lower == 'input') {
+               activeDirection = PortDirection.input;
+             } else if (lower == 'output') {
+               activeDirection = PortDirection.output;
+             } else if (lower == 'inout') {
+               activeDirection = PortDirection.inout;
+             }
+             // Check for width specification [X:Y] or [X]
+             if (t.text == '[') {
+               // Collect tokens until ] for width spec
+               final widthTokens = <String>[];
+               int widthDepth = 1;
+               for (var j = i + 1; j < parsed.tokens.length; j++) {
+                 final wt = parsed.tokens[j];
+                 if (wt.text == '[') widthDepth++;
+                 if (wt.text == ']') {
+                   widthDepth--;
+                   if (widthDepth <= 0) {
+                     pendingWidth = widthTokens.join(' ').trim();
+                     break;
+                   }
+                 }
+                 if (widthDepth > 0) {
+                   widthTokens.add(wt.text ?? '');
+                 }
+               }
+             }
+             final name = t.text ?? '';
+             if (name.isNotEmpty && _isIdentifierToken(name)) {
+               // only accept identifiers that look like port names: the next
+               // significant token should be a comma or closing parenthesis.
+               final nextIdx = i + 1;
+               final nextTok = (nextIdx < parsed.tokens.length) ? parsed.tokens[nextIdx] : null;
+               final nextText = nextTok?.text ?? '';
+               if (nextText == ',' || nextText == ')') {
+                 if (!existing.contains(name)) {
+                   headerPortNames.add(name);
+                   existing.add(name);
+                 }
+                 if (activeDirection != null) {
+                   directionMap[name] = activeDirection!;
+                 }
+                 // Store width if available
+                 if (pendingWidth != null && pendingWidth.contains(':')) {
+                   final parts = pendingWidth.split(':').map((p) => p.trim()).toList();
+                   if (parts.length == 2) {
+                     widthMap[name] = VectorWidth(
+                       location: parsed.sourceText.getLocation(0),
+                       msb: _parseExpressionText(parts[0], parsed),
+                       lsb: _parseExpressionText(parts[1], parsed),
+                     );
+                   }
+                   pendingWidth = null;
+                 } else if (pendingWidth != null) {
+                   // Single dimension like [7]
+                   widthMap[name] = VectorWidth(
+                     location: parsed.sourceText.getLocation(0),
+                     msb: _parseExpressionText(pendingWidth, parsed),
+                     lsb: LiteralExpression(
+                       location: parsed.sourceText.getLocation(0),
+                       kind: LiteralKind.integer,
+                       value: 0,
+                     ),
+                   );
+                   pendingWidth = null;
+                 }
+                 diagnostics.info('ir_builder: found header ident: $name width=$pendingWidth');
+               }
+             }
+           }
+         }
       }
     }
 
     // Default direction map (unknown -> inout). We'll fill directions by scanning module items for port_declaration statements.
-    final directionMap = <String, PortDirection>{};
-    for (final name in headerPortNames)
-      directionMap[name] = PortDirection.inout;
+    for (final name in headerPortNames) {
+      directionMap.putIfAbsent(name, () => PortDirection.inout);
+    }
 
     // Scan module items to find explicit port declarations (input/output/inout).
     for (final item in moduleContext.module_items()) {
@@ -298,6 +374,7 @@ class IrBuilder {
         location: parsed.sourceText.getLocation(0),
         name: name,
         direction: directionMap[name] ?? PortDirection.inout,
+        width: widthMap[name],
       ));
     }
 
@@ -310,6 +387,176 @@ class IrBuilder {
       ports: ports,
       items: items,
     );
+  }
+
+  PortDirection? _directionFromAnsiPortDecl(
+    Ansi_port_declarationContext decl,
+  ) {
+    final dirText = decl.port_direction()?.text ??
+        decl.net_port_header()?.port_direction()?.text ??
+        decl.variable_port_header()?.port_direction()?.text;
+switch (dirText) {
+      case 'input':
+        return PortDirection.input;
+      case 'output':
+        return PortDirection.output;
+      case 'inout':
+        return PortDirection.inout;
+      default:
+        return null;
+    }
+  }
+
+  VectorWidth? _extractWidthFromAnsiPortDecl(
+    Ansi_port_declarationContext decl,
+  ) {
+    // Check for width in net_port_header (e.g., logic [WIDTH-1:0])
+    // Go through net_port_type -> data_type_or_implicit -> data_type -> packed_dimensions
+    final netHeader = decl.net_port_header();
+    if (netHeader != null) {
+      final netType = netHeader.net_port_type();
+      if (netType != null) {
+        final dataTypeOrImplicit = netType.data_type_or_implicit();
+        if (dataTypeOrImplicit != null) {
+          final dataType = dataTypeOrImplicit.data_type();
+          if (dataType != null) {
+            final packedDims = dataType.packed_dimensions();
+            if (packedDims.isNotEmpty) {
+              return _parsePackedDimension(packedDims.first);
+            }
+          }
+          final implicitDataType = dataTypeOrImplicit.implicit_data_type();
+          if (implicitDataType != null) {
+            final packedDims = implicitDataType.packed_dimensions();
+            if (packedDims.isNotEmpty) {
+              return _parsePackedDimension(packedDims.first);
+            }
+          }
+        }
+      }
+    }
+
+    // Check for width in variable_port_header (e.g., logic [WIDTH-1:0])
+    final varHeader = decl.variable_port_header();
+    if (varHeader != null) {
+      final varType = varHeader.variable_port_type();
+      if (varType != null) {
+        final dataType = varType.var_data_type()?.data_type();
+        if (dataType != null) {
+          final packedDims = dataType.packed_dimensions();
+          if (packedDims.isNotEmpty) {
+            return _parsePackedDimension(packedDims.first);
+          }
+        }
+      }
+    }
+
+    // Check for any packed dimensions in the declaration
+    final widthText = decl.text;
+    final widthMatch = RegExp(r'\[([^\]]+)\]').firstMatch(widthText);
+    if (widthMatch != null) {
+      final widthSpec = widthMatch.group(1)?.trim();
+      if (widthSpec != null && widthSpec.contains(':')) {
+        final parts = widthSpec.split(':').map((p) => p.trim()).toList();
+        if (parts.length == 2) {
+          return VectorWidth(
+            location: SourceLocation.dummy(),
+            msb: _parseSimpleExpression(parts[0]),
+            lsb: _parseSimpleExpression(parts[1]),
+          );
+        }
+      }
+    }
+
+    return null;
+  }
+
+  VectorWidth? _parsePackedDimension(
+    dynamic packedDim,
+  ) {
+    // packed_dimension has either constant_range or unsized_dimension
+    final constantRange = packedDim.constant_range();
+    if (constantRange != null) {
+      final msbExpr = _parseConstantRangeExpression(
+          constantRange.constant_expression(0));
+      final lsbExpr = _parseConstantRangeExpression(
+          constantRange.constant_expression(1));
+      return VectorWidth(
+        location: SourceLocation.dummy(),
+        msb: msbExpr,
+        lsb: lsbExpr,
+      );
+    }
+    return null;
+  }
+
+IrExpression _parseConstantRangeExpression(
+    dynamic expr,
+  ) {
+    if (expr == null) {
+      return LiteralExpression(
+        location: SourceLocation.dummy(),
+        kind: LiteralKind.integer,
+        value: 0,
+      );
+    }
+    // Get the text representation
+    final text = expr.getText() ?? '0';
+    final trimmed = text.trim();
+    final integer = int.tryParse(trimmed);
+    if (integer != null) {
+      return LiteralExpression(
+        location: SourceLocation.dummy(),
+        kind: LiteralKind.integer,
+        value: integer,
+      );
+    }
+    // Handle parameter references like WIDTH-1
+    if (trimmed.contains('-') || trimmed.contains('+')) {
+      final parts = _splitRangeExpression(trimmed);
+      if (parts.length == 2) {
+        return BinaryExpression(
+          location: SourceLocation.dummy(),
+          left: _parseSimpleExpression(parts[0].trim()),
+          right: _parseSimpleExpression(parts[1].trim()),
+          operator: BinaryOperator.subtract,
+        );
+      }
+    }
+    return IdentifierExpression(
+      location: SourceLocation.dummy(),
+      identifier: trimmed,
+    );
+  }
+
+  List<String> _splitRangeExpression(String expr) {
+    final plusIdx = expr.indexOf('+');
+    final minusIdx = expr.indexOf('-');
+    final idx = (plusIdx != -1 && minusIdx != -1)
+        ? (plusIdx < minusIdx ? plusIdx : minusIdx)
+        : (plusIdx != -1 ? plusIdx : minusIdx);
+    if (idx == -1) return [expr];
+    return [expr.substring(0, idx), expr.substring(idx + 1)];
+  }
+
+IrExpression _parseSimpleExpression(String text) {
+    final trimmed = text.trim();
+    final integer = int.tryParse(trimmed);
+    if (integer != null) {
+      return LiteralExpression(
+        location: SourceLocation.dummy(),
+        kind: LiteralKind.integer,
+        value: integer,
+      );
+    }
+    return IdentifierExpression(
+      location: SourceLocation.dummy(),
+      identifier: trimmed,
+    );
+  }
+
+  bool _isIdentifierToken(String text) {
+    return RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(text);
   }
 
   List<IrNode> _convertModuleItems(
