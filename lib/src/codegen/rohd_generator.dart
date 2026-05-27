@@ -102,9 +102,8 @@ class RohdGenerator {
     List<SignalDeclaration> signals,
     List<PortDeclaration> ports,
   ) {
-    final reserved = ports
-        .map((p) => namingStrategy.toCamelCase(p.name))
-        .toSet();
+    final reserved =
+        ports.map((p) => namingStrategy.toCamelCase(p.name)).toSet();
     for (final signal in signals) {
       final name = namingStrategy.toCamelCase(signal.name);
       if (reserved.contains(name)) {
@@ -195,9 +194,8 @@ class RohdGenerator {
     List<SignalDeclaration> signals,
     List<PortDeclaration> ports,
   ) {
-    final reserved = ports
-        .map((p) => namingStrategy.toCamelCase(p.name))
-        .toSet();
+    final reserved =
+        ports.map((p) => namingStrategy.toCamelCase(p.name)).toSet();
     for (final signal in signals) {
       final name = namingStrategy.toCamelCase(signal.name);
       if (reserved.contains(name)) {
@@ -426,14 +424,14 @@ class RohdGenerator {
     if (width == null) return '1';
     final msb = width.msb;
     final lsb = width.lsb;
-    
+
     // Try to parse as integer expressions
     if (msb is LiteralExpression && lsb is LiteralExpression) {
       final widthInt = msb.value as int;
       final lsbInt = lsb.value as int;
       return ((widthInt - lsbInt).abs() + 1).toString();
     }
-    
+
     // todo: validate and harden the ir tree to ensure msb and lsb are always present and valid for width declarations
     // For parameterized widths, default to an impossible value
     return '-1'; // Default width for parameterized signals
