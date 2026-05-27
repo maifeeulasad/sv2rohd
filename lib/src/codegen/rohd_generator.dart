@@ -1,11 +1,10 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
-import '../ir/ir.dart';
 import '../analysis/symbol.dart';
+import '../ir/ir.dart';
 import 'expression_generator.dart';
-import 'signal_generator.dart';
-import 'module_generator.dart';
+import 'statement_generator.dart';
 import 'naming_strategy.dart';
 
 /// Options for code generation.
@@ -26,26 +25,21 @@ class GeneratorOptions {
 /// Main ROHD code generator.
 class RohdGenerator {
   final GeneratorOptions options;
+  final NamingStrategy namingStrategy;
   final ExpressionGenerator exprGen;
-  final SignalGenerator signalGen;
-  final ModuleGenerator moduleGen;
+  final StatementGenerator stmtGen;
   final StringBuffer _buffer = StringBuffer();
   int _indentLevel = 0;
 
   RohdGenerator({
     GeneratorOptions? options,
   })  : options = options ?? const GeneratorOptions(),
+        namingStrategy = options?.namingStrategy ?? const NamingStrategy(),
         exprGen = ExpressionGenerator(
           namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
         ),
-        signalGen = SignalGenerator(
-          namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
-        ),
-        moduleGen = ModuleGenerator(
+        stmtGen = StatementGenerator(
           exprGen: ExpressionGenerator(
-            namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
-          ),
-          signalGen: SignalGenerator(
             namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
           ),
           namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
@@ -56,10 +50,7 @@ class RohdGenerator {
     _buffer.clear();
     _indentLevel = 0;
 
-    // Generate imports
     _generateImports();
-
-    // Generate module class
     _generateModule(module);
 
     return _buffer.toString();
@@ -71,142 +62,281 @@ class RohdGenerator {
   }
 
   void _generateModule(ModuleDeclaration module) {
-    final className = options.namingStrategy.toClassName(module.name);
+    final className = namingStrategy.toClassName(module.name);
+    final signalDecls = _collectSignals(module.items);
 
     _writeLine('class $className extends Module {');
-
-    // Generate constructor
     _indent();
-    _generateConstructor(module);
 
-    // Generate ports
-    _generatePorts(module.ports);
+    _generatePortFields(module.ports);
+    _generateSignalFields(signalDecls, module.ports);
 
-    // Generate build method
-    _writeLine();
-    _generateBuildMethod(module);
+    if (module.ports.isNotEmpty || signalDecls.isNotEmpty) {
+      _writeLine();
+    }
+
+    _generateConstructor(module, signalDecls);
 
     _dedent();
     _writeLine('}');
   }
 
-  void _generateConstructor(ModuleDeclaration module) {
-    final className = options.namingStrategy.toClassName(module.name);
-    final params = <String>[];
-
-    // Generate parameter declarations
-    for (final param in module.parameters) {
-      final paramName = options.namingStrategy.toCamelCase(param.name);
-      final defaultValue = param.defaultValue != null
-          ? exprGen.generate(param.defaultValue!)
-          : '0';
-      params.add('int $paramName = $defaultValue');
+  List<SignalDeclaration> _collectSignals(List<IrNode> items) {
+    final signals = <SignalDeclaration>[];
+    for (final item in items) {
+      if (item is SignalDeclaration) {
+        signals.add(item);
+      }
     }
-
-    final paramStr = params.isEmpty ? '' : ', {${params.join(', ')}}';
-
-    _writeLine('$className($paramStr) : super(name: \'${module.name}\') {');
-    _writeLine('  build();');
-    _writeLine('}');
-    _writeLine();
+    return signals;
   }
 
-  void _generatePorts(List<PortDeclaration> ports) {
+  void _generatePortFields(List<PortDeclaration> ports) {
     for (final port in ports) {
-      final portName = options.namingStrategy.toCamelCase(port.name);
-      final width = _getWidth(port.width);
+      final portName = namingStrategy.toCamelCase(port.name);
+      _writeLine('late final Logic $portName;');
+    }
+  }
 
-      switch (port.direction) {
-        case PortDirection.input:
-          _writeLine(
-              "final $portName = addInput('${port.name}', width: $width);");
-          break;
-        case PortDirection.output:
-          _writeLine(
-              "final $portName = addOutput('${port.name}', width: $width);");
-          break;
-        case PortDirection.inout:
-          _writeLine(
-              "final $portName = addInOut('${port.name}', width: $width);");
-          break;
+  void _generateSignalFields(
+    List<SignalDeclaration> signals,
+    List<PortDeclaration> ports,
+  ) {
+    final reserved = ports
+        .map((p) => namingStrategy.toCamelCase(p.name))
+        .toSet();
+    for (final signal in signals) {
+      final name = namingStrategy.toCamelCase(signal.name);
+      if (reserved.contains(name)) {
+        continue;
+      }
+      _writeLine('late final Logic $name;');
+    }
+  }
+
+  void _generateConstructor(
+    ModuleDeclaration module,
+    List<SignalDeclaration> signals,
+  ) {
+    final className = namingStrategy.toClassName(module.name);
+    final paramStr = _constructorParams(module);
+
+    _writeLine('$className($paramStr) : super(name: \'${module.name}\') {');
+    _indent();
+
+    if (module.ports.isNotEmpty) {
+      _writeLine('// Ports');
+      for (final port in module.ports) {
+        _generatePortAssignment(port);
+      }
+    }
+
+    if (signals.isNotEmpty) {
+      if (module.ports.isNotEmpty) {
+        _writeLine();
+      }
+      _writeLine('// Internal signals');
+      _generateSignalAssignments(signals, module.ports);
+    }
+
+    _generateLogic(module);
+
+    _dedent();
+    _writeLine('}');
+  }
+
+  String _constructorParams(ModuleDeclaration module) {
+    final params = <String>[];
+    for (final port in module.ports) {
+      if (port.direction == PortDirection.output) continue;
+      final portName = namingStrategy.toCamelCase(port.name);
+      params.add('Logic ${_portSourceParamName(portName)}');
+    }
+
+    if (module.parameters.isNotEmpty) {
+      final namedParams = <String>[];
+      for (final param in module.parameters) {
+        final paramName = namingStrategy.toCamelCase(param.name);
+        final defaultValue = param.defaultValue != null
+            ? exprGen.generate(param.defaultValue!)
+            : '0';
+        namedParams.add('int $paramName = $defaultValue');
+      }
+      params.add('{${namedParams.join(', ')}}');
+    }
+
+    return params.join(', ');
+  }
+
+  void _generatePortAssignment(PortDeclaration port) {
+    final portName = namingStrategy.toCamelCase(port.name);
+    final width = _getWidth(port.width);
+    final sourceName = _portSourceParamName(portName);
+
+    switch (port.direction) {
+      case PortDirection.input:
+        _writeLine(
+            "this.$portName = addInput('${port.name}', $sourceName, width: $width);");
+        break;
+      case PortDirection.output:
+        _writeLine(
+            "this.$portName = addOutput('${port.name}', width: $width);");
+        break;
+      case PortDirection.inout:
+        _writeLine(
+            "this.$portName = addInOut('${port.name}', $sourceName, width: $width);");
+        break;
+    }
+  }
+
+  String _portSourceParamName(String portName) => '${portName}Source';
+
+  void _generateSignalAssignments(
+    List<SignalDeclaration> signals,
+    List<PortDeclaration> ports,
+  ) {
+    final reserved = ports
+        .map((p) => namingStrategy.toCamelCase(p.name))
+        .toSet();
+    for (final signal in signals) {
+      final name = namingStrategy.toCamelCase(signal.name);
+      if (reserved.contains(name)) {
+        continue;
+      }
+      final width = _getWidth(signal.width);
+      _writeLine("$name = Logic(name: '${signal.name}', width: $width);");
+      if (signal.initialValue != null) {
+        _writeLine('// TODO: initial value');
       }
     }
   }
 
-  void _generateBuildMethod(ModuleDeclaration module) {
-    _writeLine('@override');
-    _writeLine('void build() {');
+  void _generateLogic(ModuleDeclaration module) {
+    final combinational = <IrStatement>[];
+    final sequential = <IrStatement>[];
+    final directItems = <IrNode>[];
 
-    _indent();
-
-    // Generate signals and items
     for (final item in module.items) {
-      _generateItem(item);
+      if (item is SignalDeclaration) {
+        continue;
+      }
+      if (item is ContinuousAssignment ||
+          item is ModuleInstantiation ||
+          item is GenerateBlock ||
+          item is RawCodeItem ||
+          item is InitialBlock) {
+        directItems.add(item);
+        continue;
+      }
+      if (item is AlwaysBlock) {
+        if (item.kind == BlockKind.alwaysFf) {
+          sequential.add(item.body);
+        } else if (item.kind == BlockKind.alwaysComb) {
+          combinational.add(item.body);
+        } else {
+          combinational.add(item.body);
+        }
+        continue;
+      }
+      if (item is IrStatement) {
+        if (item is AssignmentStatement &&
+            item.type == AssignmentType.continuous) {
+          directItems.add(item);
+        } else if (_isSequentialStatement(item)) {
+          sequential.add(item);
+        } else {
+          combinational.add(item);
+        }
+      }
     }
 
-    _dedent();
-    _writeLine('}');
+    for (final item in directItems) {
+      if (item is ContinuousAssignment) {
+        _generateContinuousAssignment(item);
+      } else if (item is AssignmentStatement &&
+          item.type == AssignmentType.continuous) {
+        _generateAssignmentStatement(item);
+      } else if (item is ModuleInstantiation) {
+        _generateModuleInstantiation(item);
+      } else if (item is GenerateBlock) {
+        _generateGenerateBlock(item);
+      } else if (item is RawCodeItem) {
+        _generateRawCode(item);
+      } else if (item is InitialBlock) {
+        _generateInitialBlock(item);
+      }
+    }
+
+    if (combinational.isNotEmpty) {
+      _writeLine();
+      _writeLine('Combinational([');
+      _indent();
+      for (final stmt in combinational) {
+        _emitStatement(stmt, asListItem: true);
+      }
+      _dedent();
+      _writeLine(']);');
+    }
+
+    if (sequential.isNotEmpty) {
+      final clockName = _clockSignalName(module);
+      _writeLine();
+      if (clockName == null) {
+        _writeLine('// TODO: missing clock for sequential logic');
+        _writeLine('Combinational([');
+      } else {
+        _writeLine('Sequential($clockName, [');
+      }
+      _indent();
+      for (final stmt in sequential) {
+        _emitStatement(stmt, asListItem: true);
+      }
+      _dedent();
+      _writeLine(']);');
+    }
   }
 
-  void _generateItem(IrNode item) {
-    if (item is SignalDeclaration) {
-      signalGen.generateSignal(_buffer, item);
-    } else if (item is ContinuousAssignment) {
-      _generateContinuousAssignment(item);
-    } else if (item is AlwaysBlock) {
-      _generateAlwaysBlock(item);
-    } else if (item is InitialBlock) {
-      _generateInitialBlock(item);
-    } else if (item is ModuleInstantiation) {
-      _generateModuleInstantiation(item);
-    } else if (item is GenerateBlock) {
-      _generateGenerateBlock(item);
+  void _emitStatement(IrStatement stmt, {required bool asListItem}) {
+    final temp = StringBuffer();
+    stmtGen.generate(temp, stmt, asListItem: asListItem);
+    final lines = temp.toString().split('\n');
+    for (final line in lines) {
+      if (line.isEmpty) continue;
+      _writeLine(line);
     }
   }
 
   void _generateContinuousAssignment(ContinuousAssignment assign) {
     final target = exprGen.generate(assign.target);
-    final value = exprGen.generate(assign.value);
+    final value = _valueForContinuous(assign.value, target);
     _writeLine('$target <= $value;');
   }
 
-  void _generateAlwaysBlock(AlwaysBlock block) {
-    switch (block.kind) {
-      case BlockKind.alwaysComb:
-        _writeLine('Combinational([');
-        _indent();
-        _generateStatement(block.body);
-        _dedent();
-        _writeLine(']);');
-        break;
-      case BlockKind.alwaysFf:
-        _writeLine('// TODO: Sequential logic');
-        _generateStatement(block.body);
-        break;
-      case BlockKind.alwaysLatch:
-        _writeLine('// TODO: Latch logic');
-        _generateStatement(block.body);
-        break;
-      case BlockKind.initial:
-      case BlockKind.finalBlock:
-        _writeLine('// Initial/final blocks not supported in ROHD');
-        break;
+  void _generateAssignmentStatement(AssignmentStatement assign) {
+    final target = exprGen.generate(assign.target);
+    final value = _valueForContinuous(assign.value, target);
+    _writeLine('$target <= $value;');
+  }
+
+  String _valueForContinuous(IrExpression value, String target) {
+    if (value is LiteralExpression) {
+      final literal = exprGen.generate(value);
+      return 'Const($literal, width: $target.width)';
     }
+    return exprGen.generate(value);
   }
 
   void _generateInitialBlock(InitialBlock block) {
     _writeLine('// Initial block - use Simulator for testbenches');
-    // Could generate Simulator.registerFunction() here
   }
 
   void _generateModuleInstantiation(ModuleInstantiation inst) {
-    final instanceName = options.namingStrategy.toCamelCase(inst.instanceName);
-    final className = options.namingStrategy.toClassName(inst.moduleName);
+    final instanceName = namingStrategy.toCamelCase(inst.instanceName);
+    final className = namingStrategy.toClassName(inst.moduleName);
 
-    // Generate port connections
     final conns = <String>[];
     for (final conn in inst.portConnections) {
-      final portName = options.namingStrategy.toCamelCase(conn.portName);
+      final portName = namingStrategy.toCamelCase(conn.portName);
       if (conn.value != null) {
         final value = exprGen.generate(conn.value!);
         conns.add('$portName: $value');
@@ -219,163 +349,94 @@ class RohdGenerator {
   }
 
   void _generateGenerateBlock(GenerateBlock block) {
-    // Generate blocks are handled at parse time in ROHD
-    // For now, just generate the contents
     for (final item in block.items) {
-      _generateItem(item);
-    }
-  }
-
-  void _generateStatement(IrStatement stmt) {
-    if (stmt is AssignmentStatement) {
-      _generateAssignment(stmt);
-    } else if (stmt is IfStatement) {
-      _generateIfStatement(stmt);
-    } else if (stmt is CaseStatement) {
-      _generateCaseStatement(stmt);
-    } else if (stmt is ForLoopStatement) {
-      _generateForLoop(stmt);
-    } else if (stmt is WhileLoopStatement) {
-      _generateWhileLoop(stmt);
-    } else if (stmt is SequentialBlock) {
-      _generateSequentialBlock(stmt);
-    } else if (stmt is ReturnStatement) {
-      _generateReturnStatement(stmt);
-    } else if (stmt is EmptyStatement) {
-      // Skip empty statements
-    }
-  }
-
-  void _generateAssignment(AssignmentStatement assign) {
-    final target = exprGen.generate(assign.target);
-    final value = exprGen.generate(assign.value);
-
-    switch (assign.type) {
-      case AssignmentType.blocking:
-        _writeLine('$target < $value;');
-        break;
-      case AssignmentType.nonBlocking:
-        _writeLine('$target <= $value;');
-        break;
-      case AssignmentType.continuous:
-        _writeLine('$target <= $value;');
-        break;
-      case AssignmentType.procedural:
-        _writeLine('$target < $value;');
-        break;
-    }
-  }
-
-  void _generateIfStatement(IfStatement stmt) {
-    final condition = exprGen.generate(stmt.condition);
-
-    _write('If($condition, then: [');
-    _indent();
-
-    for (final s in _flattenBlock(stmt.thenBranch)) {
-      _generateStatement(s);
-    }
-
-    _dedent();
-    _write(']');
-
-    if (stmt.elseBranch != null) {
-      _write(', else: [');
-      _indent();
-
-      for (final s in _flattenBlock(stmt.elseBranch!)) {
-        _generateStatement(s);
+      if (item is RawCodeItem) {
+        _generateRawCode(item);
       }
-
-      _dedent();
-      _write(']');
     }
-
-    _writeLine('),');
   }
 
-  void _generateCaseStatement(CaseStatement stmt) {
-    final selector = exprGen.generate(stmt.expression);
-
-    _writeLine('Case($selector, [');
-
-    _indent();
-
-    for (final item in stmt.items) {
-      _generateCaseItem(item);
+  void _generateRawCode(RawCodeItem item) {
+    for (final line in item.code.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      _writeLine(line);
     }
-
-    if (stmt.items.isEmpty || (stmt.items.last).values.isNotEmpty) {
-      // No default case
-    }
-
-    _dedent();
-    _writeLine(']),');
   }
 
-  void _generateCaseItem(CaseItem item) {
-    for (final value in item.values) {
-      final val = exprGen.generate(value);
-      _writeLine('CaseItem($val, [');
-      _indent();
+  bool _isSequentialStatement(IrStatement stmt) {
+    return _containsNonBlocking(stmt);
+  }
 
-      if (item.statement != null) {
-        for (final s in _flattenBlock(item.statement!)) {
-          _generateStatement(s);
+  bool _containsNonBlocking(IrStatement stmt) {
+    if (stmt is AssignmentStatement) {
+      return stmt.type == AssignmentType.nonBlocking;
+    }
+    if (stmt is NonBlockingAssignmentStatement) {
+      return true;
+    }
+    if (stmt is IfStatement) {
+      return _containsNonBlocking(stmt.thenBranch) ||
+          (stmt.elseBranch != null && _containsNonBlocking(stmt.elseBranch!));
+    }
+    if (stmt is CaseStatement) {
+      for (final item in stmt.items) {
+        if (item.statement != null && _containsNonBlocking(item.statement!)) {
+          return true;
         }
       }
-
-      _dedent();
-      _writeLine(']),');
+      if (stmt.defaultCase != null) {
+        return _containsNonBlocking(stmt.defaultCase!);
+      }
     }
-  }
-
-  void _generateForLoop(ForLoopStatement stmt) {
-    // ROHD doesn't have for loops in Combinational/Sequential
-    // For now, just generate the body
-    _writeLine('// for loop');
-    _generateStatement(stmt.body);
-  }
-
-  void _generateWhileLoop(WhileLoopStatement stmt) {
-    _writeLine('// while loop');
-    _generateStatement(stmt.body);
-  }
-
-  void _generateSequentialBlock(SequentialBlock stmt) {
-    for (final s in stmt.statements) {
-      _generateStatement(s);
-    }
-  }
-
-  void _generateReturnStatement(ReturnStatement stmt) {
-    if (stmt.value != null) {
-      final value = exprGen.generate(stmt.value!);
-      _writeLine('return $value;');
-    } else {
-      _writeLine('return;');
-    }
-  }
-
-  List<IrStatement> _flattenBlock(IrStatement stmt) {
     if (stmt is SequentialBlock) {
-      return stmt.statements.expand(_flattenBlock).toList();
+      for (final s in stmt.statements) {
+        if (_containsNonBlocking(s)) {
+          return true;
+        }
+      }
     }
-    return [stmt];
+    if (stmt is ForLoopStatement) {
+      return _containsNonBlocking(stmt.body) ||
+          (stmt.initialization != null &&
+              _containsNonBlocking(stmt.initialization!)) ||
+          (stmt.step != null && _containsNonBlocking(stmt.step!));
+    }
+    if (stmt is WhileLoopStatement) {
+      return _containsNonBlocking(stmt.body);
+    }
+    return false;
+  }
+
+  String? _clockSignalName(ModuleDeclaration module) {
+    for (final port in module.ports) {
+      final lower = port.name.toLowerCase();
+      if (lower == 'clk' || lower == 'clock') {
+        return namingStrategy.toCamelCase(port.name);
+      }
+    }
+    for (final port in module.ports) {
+      if (port.direction == PortDirection.input) {
+        return namingStrategy.toCamelCase(port.name);
+      }
+    }
+    return null;
   }
 
   String _getWidth(VectorWidth? width) {
     if (width == null) return '1';
-    if (width.msb is LiteralExpression && width.lsb is LiteralExpression) {
-      final msb = (width.msb as LiteralExpression).value as int;
-      final lsb = (width.lsb as LiteralExpression).value as int;
-      return ((msb - lsb).abs() + 1).toString();
+    final msb = width.msb;
+    final lsb = width.lsb;
+    
+    // Try to parse as integer expressions
+    if (msb is LiteralExpression && lsb is LiteralExpression) {
+      final widthInt = msb.value as int;
+      final lsbInt = lsb.value as int;
+      return ((widthInt - lsbInt).abs() + 1).toString();
     }
-    return '1';
-  }
-
-  void _write(String text) {
-    _buffer.write(text);
+    
+    // todo: validate and harden the ir tree to ensure msb and lsb are always present and valid for width declarations
+    // For parameterized widths, default to an impossible value
+    return '-1'; // Default width for parameterized signals
   }
 
   void _writeLine([String text = '']) {
