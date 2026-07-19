@@ -21,6 +21,7 @@ void main() {
       const _Fixture('adder', 'fixtures/sv_samples/adder.sv'),
       const _Fixture('alu', 'fixtures/sv_samples/alu.sv'),
       const _Fixture('multiplier', 'fixtures/sv_samples/multiplier.sv'),
+      const _Fixture('hierarchy', 'fixtures/sv_samples/hierarchy.sv'),
     ];
 
     for (final fixture in fixtures) {
@@ -43,8 +44,13 @@ void main() {
         final module = builder.buildModule(parsed);
 
         final rohdPath = p.join(runDir.path, '${fixture.name}.dart');
-        final converter = SV2ROHD(namingStrategy: namingStrategy);
+        final converter = SV2ROHD(
+          diagnostics: diagnostics,
+          namingStrategy: namingStrategy,
+        );
         converter.convert(fixture.path, outputPath: rohdPath);
+        expect(converter.hasErrors, isFalse,
+            reason: converter.diagnosticSummary);
 
         final driverPath = p.join(runDir.path, '${fixture.name}_driver.dart');
         final driverSource = _buildDriver(

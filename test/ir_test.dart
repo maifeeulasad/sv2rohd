@@ -11,7 +11,9 @@ void main() {
     test('creates with location', () {
       final location =
           SourceLocation(sourceName: 'test.sv', line: 1, column: 1, offset: 0);
-      // Test would use concrete implementations
+      final node = EmptyStatement(location: location);
+      expect(node.location, location);
+      expect(node.children, isEmpty);
     });
   });
 

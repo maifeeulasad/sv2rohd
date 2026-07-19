@@ -30,13 +30,21 @@ void main() {
       expect(output, contains('class Adder extends Module'));
       expect(output, contains("addInput('clk', clkSource"));
       expect(output, contains("addOutput('sum'"));
+      expect(output, contains('{int width = 8}'));
+      expect(output, contains("addInput('a', aSource, width: width)"));
+      expect(output, contains("addOutput('sum', width: width + 1)"));
       expect(output, contains('Sequential(clk'));
       expect(output, contains('If(~rstN'));
-      expect(output, contains('sum < (a + b)'));
+      // SystemVerilog context rules extend a and b to the width of sum so
+      // the carry bit is preserved.
+      expect(
+        output,
+        contains('sum < (a.zeroExtend(sum.width) + b.zeroExtend(sum.width))'),
+      );
       expect(output, contains('ready < 1'));
     });
 
-    test('alu emits combinational case logic and generate summary', () {
+    test('alu emits combinational case logic and elaborated generates', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/alu.dart');
 
@@ -47,11 +55,24 @@ void main() {
 
       expect(outputFile.existsSync(), isTrue);
       expect(output, contains('class Alu extends Module'));
-      expect(output, contains('late final Logic stage'));
+      expect(output, contains('late final List<Logic> stage'));
       expect(output, contains('late final Logic validPipe'));
+      expect(output, contains('{int width = 8, int depth = 4}'));
       expect(output, contains('Combinational(['));
       expect(output, contains('Case(op'));
-      expect(output, contains('// for-generate pipe_stage over DEPTH'));
+      // All seven operations of the case statement are converted.
+      expect(output, contains('result < (a + b)'));
+      expect(output, contains('result < (a - b)'));
+      expect(output, contains('result < (a & b)'));
+      expect(output, contains('result < (a | b)'));
+      expect(output, contains('result < (a ^ b)'));
+      expect(output, contains('result < (a << 1)'));
+      expect(output, contains('result < (a >>> 1)'));
+      // The for-generate is elaborated into a Dart loop over the parameter.
+      expect(output, contains('for (var i = 0; i < depth; i++)'));
+      expect(output, contains('stage[i] < stage[i - 1]'));
+      // The if-generate becomes a Dart if on the parameter.
+      expect(output, contains('if (width > 16)'));
       expect(output, contains('overflow <= Const(0'));
     });
 
@@ -72,6 +93,27 @@ void main() {
       expect(output, contains('Sequential(clk'));
       expect(output, contains('If(~rstN'));
       expect(output, contains('product <= resultReg;'));
+    });
+
+    test('hierarchy emits both modules and resolved instantiations', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/hierarchy.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/hierarchy.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      expect(output, contains('class FullAdder extends Module'));
+      expect(output, contains('class HalfAdder extends Module'));
+      // Named connections are resolved to positional constructor arguments.
+      expect(output, contains('final ha1 = HalfAdder(a, b);'));
+      expect(output, contains('final ha2 = HalfAdder(s1, cin);'));
+      // Instance outputs are wired back to the connected signals.
+      expect(output, contains('s1 <= ha1.s;'));
+      expect(output, contains('sum <= ha2.s;'));
+      expect(output, contains('cout <= (c1 | c2);'));
     });
   });
 }

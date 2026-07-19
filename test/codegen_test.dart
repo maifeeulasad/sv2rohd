@@ -88,7 +88,7 @@ void main() {
           identifier: 'b',
         ),
       );
-      expect(exprGen.generate(conditional), 'sel.mux(a, b)');
+      expect(exprGen.generate(conditional), 'mux(sel, a, b)');
     });
 
     test('generates concatenation', () {
@@ -105,7 +105,7 @@ void main() {
           ),
         ],
       );
-      expect(exprGen.generate(concat), '[a, b]');
+      expect(exprGen.generate(concat), '[a, b].swizzle()');
     });
   });
 
