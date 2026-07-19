@@ -233,6 +233,26 @@ endmodule
       expect(value.width, 8);
     });
 
+    test('preserves x/z wildcard bits on sized binary literals', () {
+      final value = parseAssignValue("4'b1z0z") as LiteralExpression;
+      expect(value.wildcardBits, '1z0z');
+    });
+
+    test('expands a single wildcard hex digit to 4 bits', () {
+      final value = parseAssignValue("8'hAz") as LiteralExpression;
+      expect(value.wildcardBits, '1010zzzz');
+    });
+
+    test('expands ? wildcards the same as z', () {
+      final value = parseAssignValue("4'b1???") as LiteralExpression;
+      expect(value.wildcardBits, '1zzz');
+    });
+
+    test('does not set wildcardBits when there are no x/z digits', () {
+      final value = parseAssignValue("4'b0001") as LiteralExpression;
+      expect(value.wildcardBits, isNull);
+    });
+
     test('parses unbased zero literal', () {
       final value = parseAssignValue("'0") as LiteralExpression;
       expect(value.value, 0);
