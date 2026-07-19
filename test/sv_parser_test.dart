@@ -337,5 +337,32 @@ endmodule
       final ifGen = forGen.body.items.whereType<IfGenerateBlock>().single;
       expect(ifGen.elseBranch, isNotNull);
     });
+
+    test('parses a case-generate with multi-value items and a default', () {
+      final module = parse('''
+module m #(parameter MODE = 0) (input logic [7:0] a, output logic [7:0] y);
+  generate
+    case (MODE)
+      0: begin
+        assign y = a;
+      end
+      1, 2: begin
+        assign y = ~a;
+      end
+      default: begin
+        assign y = 8'h00;
+      end
+    endcase
+  endgenerate
+endmodule
+''').single;
+
+      final caseGen = module.items.whereType<CaseGenerateBlock>().single;
+      expect(caseGen.items, hasLength(3));
+      expect(caseGen.items[0].values, hasLength(1));
+      expect(caseGen.items[1].values, hasLength(2));
+      // The default branch is represented by an item with empty values.
+      expect(caseGen.items[2].values, isEmpty);
+    });
   });
 }
