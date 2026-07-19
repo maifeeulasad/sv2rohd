@@ -1,11 +1,16 @@
 // Copyright (C) 2026, Maifee Ul Asad<maifeeulasad@gmail.com>, BSD-3-Clause
 // SPDX-License-Identifier: BSD-3-Clause
 
+// Parts of this implementation were generated with LLM assistance and
+// reviewed by the maintainer.
+
+import '../common/common.dart';
 import '../analysis/symbol.dart';
 import '../ir/ir.dart';
 import 'expression_generator.dart';
 import 'statement_generator.dart';
 import 'naming_strategy.dart';
+import 'width_analyzer.dart';
 
 /// Options for code generation.
 class GeneratorOptions {
@@ -23,355 +28,526 @@ class GeneratorOptions {
 }
 
 /// Main ROHD code generator.
+///
+/// Translates IR modules into ROHD `Module` subclasses:
+/// - parameters become named `int` constructor arguments,
+/// - parameterized widths become Dart integer expressions,
+/// - unpacked arrays become `List<Logic>`,
+/// - generate blocks are elaborated into Dart `for`/`if` constructs,
+/// - each `always_ff`/`always_comb` becomes its own `Sequential`/
+///   `Combinational` block.
 class RohdGenerator {
   final GeneratorOptions options;
   final NamingStrategy namingStrategy;
-  final ExpressionGenerator exprGen;
-  final StatementGenerator stmtGen;
+  final DiagnosticCollector? diagnostics;
+
+  final Map<String, ModuleDeclaration> _knownModules = {};
   final StringBuffer _buffer = StringBuffer();
   int _indentLevel = 0;
 
+  late WidthAnalyzer _wa;
+  late ExpressionGenerator _exprGen;
+  late StatementGenerator _stmtGen;
+
   RohdGenerator({
     GeneratorOptions? options,
+    this.diagnostics,
   })  : options = options ?? const GeneratorOptions(),
-        namingStrategy = options?.namingStrategy ?? const NamingStrategy(),
-        exprGen = ExpressionGenerator(
-          namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
-        ),
-        stmtGen = StatementGenerator(
-          exprGen: ExpressionGenerator(
-            namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
-          ),
-          namingStrategy: options?.namingStrategy ?? const NamingStrategy(),
-        );
+        namingStrategy = options?.namingStrategy ?? const NamingStrategy();
 
-  /// Generate ROHD code from a module.
-  String generate(ModuleDeclaration module) {
+  /// Generate ROHD code for a single module.
+  String generate(ModuleDeclaration module) => generateAll([module]);
+
+  /// Generate ROHD code for all [modules] into a single source file.
+  String generateAll(List<ModuleDeclaration> modules) {
     _buffer.clear();
     _indentLevel = 0;
+    for (final module in modules) {
+      _knownModules[module.name] = module;
+    }
 
-    _generateImports();
-    _generateModule(module);
-
+    _writeLine("import 'package:rohd/rohd.dart';");
+    _writeLine();
+    for (var i = 0; i < modules.length; i++) {
+      if (i > 0) _writeLine();
+      _generateModule(modules[i]);
+    }
     return _buffer.toString();
   }
 
-  void _generateImports() {
-    _writeLine("import 'package:rohd/rohd.dart';");
-    _writeLine();
-  }
+  // ── Module ───────────────────────────────────────────────────────
 
   void _generateModule(ModuleDeclaration module) {
+    _setupContext(module);
+
     final className = namingStrategy.toClassName(module.name);
-    final signalDecls = _collectSignals(module.items);
+    final topSignals = _topLevelSignals(module.items);
 
     _writeLine('class $className extends Module {');
     _indent();
 
-    _generatePortFields(module.ports);
-    _generateSignalFields(signalDecls, module.ports);
-
-    if (module.ports.isNotEmpty || signalDecls.isNotEmpty) {
-      _writeLine();
+    for (final port in module.ports) {
+      final name = namingStrategy.toCamelCase(port.name);
+      final type = port.direction == PortDirection.inout ? 'LogicNet' : 'Logic';
+      _writeLine('late final $type $name;');
+    }
+    final portNames =
+        module.ports.map((p) => namingStrategy.toCamelCase(p.name)).toSet();
+    for (final signal in topSignals) {
+      final name = namingStrategy.toCamelCase(signal.name);
+      if (portNames.contains(name)) continue;
+      final type = signal.unpackedDims.isNotEmpty ? 'List<Logic>' : 'Logic';
+      _writeLine('late final $type $name;');
     }
 
-    _generateConstructor(module, signalDecls);
+    _writeLine();
+    _generateConstructor(module, topSignals, portNames);
 
     _dedent();
     _writeLine('}');
   }
 
-  List<SignalDeclaration> _collectSignals(List<IrNode> items) {
-    final signals = <SignalDeclaration>[];
+  void _setupContext(ModuleDeclaration module) {
+    _wa = WidthAnalyzer(namingStrategy: namingStrategy);
+
+    for (final param in module.parameters) {
+      _wa.intDomain.add(namingStrategy.toCamelCase(param.name));
+    }
+    _collectContext(module.items);
+    for (final port in module.ports) {
+      _wa.signalWidths[port.name] = port.width;
+    }
+
+    _exprGen = ExpressionGenerator(
+      namingStrategy: namingStrategy,
+      widthAnalyzer: _wa,
+      arraySignals: _wa.arraySignals,
+      diagnostics: diagnostics,
+    );
+    _stmtGen = StatementGenerator(
+      exprGen: _exprGen,
+      namingStrategy: namingStrategy,
+      widthAnalyzer: _wa,
+      diagnostics: diagnostics,
+    );
+  }
+
+  void _collectContext(List<IrNode> items) {
     for (final item in items) {
       if (item is SignalDeclaration) {
-        signals.add(item);
+        _wa.signalWidths[item.name] = item.width;
+        if (item.unpackedDims.isNotEmpty) {
+          _wa.arraySignals.add(item.name);
+        }
+      } else if (item is GenvarDeclaration) {
+        _wa.intDomain.add(namingStrategy.toCamelCase(item.name));
+      } else if (item is ParameterDeclaration) {
+        _wa.intDomain.add(namingStrategy.toCamelCase(item.name));
+      } else if (item is GenerateBlock) {
+        _collectContext(item.items);
+      } else if (item is ForGenerateBlock) {
+        final init = item.initialization;
+        if (init is AssignmentStatement &&
+            init.target is IdentifierExpression) {
+          _wa.intDomain.add(namingStrategy
+              .toCamelCase((init.target as IdentifierExpression).identifier));
+        }
+        _collectContext(item.body.items);
+      } else if (item is IfGenerateBlock) {
+        _collectContext(item.thenBranch.items);
+        if (item.elseBranch != null) {
+          _collectContext(item.elseBranch!.items);
+        }
       }
     }
-    return signals;
   }
 
-  void _generatePortFields(List<PortDeclaration> ports) {
-    for (final port in ports) {
-      final portName = namingStrategy.toCamelCase(port.name);
-      _writeLine('late final Logic $portName;');
-    }
-  }
-
-  void _generateSignalFields(
-    List<SignalDeclaration> signals,
-    List<PortDeclaration> ports,
-  ) {
-    final reserved =
-        ports.map((p) => namingStrategy.toCamelCase(p.name)).toSet();
-    for (final signal in signals) {
-      final name = namingStrategy.toCamelCase(signal.name);
-      if (reserved.contains(name)) {
-        continue;
-      }
-      _writeLine('late final Logic $name;');
-    }
-  }
+  List<SignalDeclaration> _topLevelSignals(List<IrNode> items) => [
+        for (final item in items)
+          if (item is SignalDeclaration) item
+      ];
 
   void _generateConstructor(
     ModuleDeclaration module,
-    List<SignalDeclaration> signals,
+    List<SignalDeclaration> topSignals,
+    Set<String> portNames,
   ) {
     final className = namingStrategy.toClassName(module.name);
-    final paramStr = _constructorParams(module);
+    final params = <String>[];
+    for (final port in module.ports) {
+      if (port.direction == PortDirection.output) continue;
+      final name = namingStrategy.toCamelCase(port.name);
+      final type = port.direction == PortDirection.inout ? 'LogicNet' : 'Logic';
+      params.add('$type ${name}Source');
+    }
+    final namedParams = <String>[
+      for (final param in module.parameters)
+        if (!param.isLocal)
+          'int ${namingStrategy.toCamelCase(param.name)} = '
+              '${param.defaultValue != null ? _exprGen.generateInt(param.defaultValue!) : '0'}',
+    ];
+    if (namedParams.isNotEmpty) {
+      params.add('{${namedParams.join(', ')}}');
+    }
 
-    _writeLine('$className($paramStr) : super(name: \'${module.name}\') {');
+    _writeLine(
+        "$className(${params.join(', ')}) : super(name: '${module.name}') {");
     _indent();
 
     if (module.ports.isNotEmpty) {
       _writeLine('// Ports');
       for (final port in module.ports) {
-        _generatePortAssignment(port);
+        _generatePortBinding(port);
       }
     }
 
-    if (signals.isNotEmpty) {
-      if (module.ports.isNotEmpty) {
-        _writeLine();
+    final localParams = [
+      for (final param in module.parameters)
+        if (param.isLocal) param,
+    ];
+    if (localParams.isNotEmpty) {
+      _writeLine();
+      _writeLine('// Local parameters');
+      for (final param in localParams) {
+        final name = namingStrategy.toCamelCase(param.name);
+        final value = param.defaultValue != null
+            ? _exprGen.generateInt(param.defaultValue!)
+            : '0';
+        _writeLine('final $name = $value;');
       }
+    }
+
+    final ownSignals = [
+      for (final signal in topSignals)
+        if (!portNames.contains(namingStrategy.toCamelCase(signal.name)))
+          signal,
+    ];
+    if (ownSignals.isNotEmpty) {
+      _writeLine();
       _writeLine('// Internal signals');
-      _generateSignalAssignments(signals, module.ports);
+      for (final signal in ownSignals) {
+        _generateSignalBinding(signal, asLocal: false);
+      }
     }
 
-    _generateLogic(module);
+    _generateItems(module.items, topLevel: true);
 
     _dedent();
     _writeLine('}');
   }
 
-  String _constructorParams(ModuleDeclaration module) {
-    final params = <String>[];
-    for (final port in module.ports) {
-      if (port.direction == PortDirection.output) continue;
-      final portName = namingStrategy.toCamelCase(port.name);
-      params.add('Logic ${_portSourceParamName(portName)}');
-    }
-
-    if (module.parameters.isNotEmpty) {
-      final namedParams = <String>[];
-      for (final param in module.parameters) {
-        final paramName = namingStrategy.toCamelCase(param.name);
-        final defaultValue = param.defaultValue != null
-            ? exprGen.generate(param.defaultValue!)
-            : '0';
-        namedParams.add('int $paramName = $defaultValue');
-      }
-      params.add('{${namedParams.join(', ')}}');
-    }
-
-    return params.join(', ');
-  }
-
-  void _generatePortAssignment(PortDeclaration port) {
-    final portName = namingStrategy.toCamelCase(port.name);
-    final width = _getWidth(port.width);
-    final sourceName = _portSourceParamName(portName);
-
+  void _generatePortBinding(PortDeclaration port) {
+    final name = namingStrategy.toCamelCase(port.name);
+    final width = _widthString(port.width);
     switch (port.direction) {
       case PortDirection.input:
         _writeLine(
-            "this.$portName = addInput('${port.name}', $sourceName, width: $width);");
-        break;
+            "$name = addInput('${port.name}', ${name}Source, width: $width);");
       case PortDirection.output:
-        _writeLine(
-            "this.$portName = addOutput('${port.name}', width: $width);");
-        break;
+        _writeLine("$name = addOutput('${port.name}', width: $width);");
       case PortDirection.inout:
         _writeLine(
-            "this.$portName = addInOut('${port.name}', $sourceName, width: $width);");
-        break;
+            "$name = addInOut('${port.name}', ${name}Source, width: $width);");
     }
   }
 
-  String _portSourceParamName(String portName) => '${portName}Source';
+  void _generateSignalBinding(SignalDeclaration signal,
+      {required bool asLocal}) {
+    final name = namingStrategy.toCamelCase(signal.name);
+    final width = _widthString(signal.width);
+    final prefix = asLocal ? 'final ' : '';
 
-  void _generateSignalAssignments(
-    List<SignalDeclaration> signals,
-    List<PortDeclaration> ports,
-  ) {
-    final reserved =
-        ports.map((p) => namingStrategy.toCamelCase(p.name)).toSet();
-    for (final signal in signals) {
-      final name = namingStrategy.toCamelCase(signal.name);
-      if (reserved.contains(name)) {
-        continue;
+    if (signal.unpackedDims.isNotEmpty) {
+      if (signal.unpackedDims.length > 1) {
+        diagnostics?.warning(
+          "signal '${signal.name}' has multiple unpacked dimensions; only "
+          'the first is used',
+          code: 'GEN0020',
+        );
       }
-      final width = _getWidth(signal.width);
-      _writeLine("$name = Logic(name: '${signal.name}', width: $width);");
-      if (signal.initialValue != null) {
-        _writeLine('// TODO: initial value');
-      }
+      final count = _dimensionCount(signal.unpackedDims.first);
+      _writeLine('$prefix$name = List.generate($count, '
+          "(i) => Logic(name: '${signal.name}_\$i', width: $width));");
+      return;
+    }
+
+    _writeLine("$prefix$name = Logic(name: '${signal.name}', width: $width);");
+    if (signal.initialValue != null) {
+      diagnostics?.warning(
+        "initial value on '${signal.name}' is ignored (use a reset instead)",
+        code: 'GEN0021',
+      );
     }
   }
 
-  void _generateLogic(ModuleDeclaration module) {
-    final combinational = <IrStatement>[];
-    final sequential = <IrStatement>[];
-    final directItems = <IrNode>[];
+  // ── Items ────────────────────────────────────────────────────────
 
-    for (final item in module.items) {
+  void _generateItems(List<IrNode> items, {required bool topLevel}) {
+    for (final item in items) {
       if (item is SignalDeclaration) {
+        if (!topLevel) {
+          _generateSignalBinding(item, asLocal: true);
+        }
         continue;
       }
-      if (item is ContinuousAssignment ||
-          item is ModuleInstantiation ||
-          item is GenerateBlock ||
-          item is RawCodeItem ||
-          item is InitialBlock) {
-        directItems.add(item);
+      if (item is GenvarDeclaration || item is ParameterDeclaration) {
         continue;
       }
       if (item is AlwaysBlock) {
-        if (item.kind == BlockKind.alwaysFf) {
-          sequential.add(item.body);
-        } else if (item.kind == BlockKind.alwaysComb) {
-          combinational.add(item.body);
-        } else {
-          combinational.add(item.body);
+        _generateAlways(item);
+        continue;
+      }
+      if (item is ContinuousAssignment) {
+        _generateContinuous(item.target, item.value);
+        continue;
+      }
+      if (item is InitialBlock) {
+        _writeLine('// initial block skipped: use Simulator for testbenches');
+        continue;
+      }
+      if (item is ModuleInstantiation) {
+        _generateInstantiation(item);
+        continue;
+      }
+      if (item is ForGenerateBlock) {
+        _generateForGenerate(item);
+        continue;
+      }
+      if (item is IfGenerateBlock) {
+        _generateIfGenerate(item);
+        continue;
+      }
+      if (item is GenerateBlock) {
+        _generateItems(item.items, topLevel: false);
+        continue;
+      }
+      if (item is RawCodeItem) {
+        for (final line in item.code.split('\n')) {
+          if (line.trim().isEmpty) continue;
+          _writeLine(line);
         }
         continue;
       }
       if (item is IrStatement) {
-        if (item is AssignmentStatement &&
-            item.type == AssignmentType.continuous) {
-          directItems.add(item);
-        } else if (_isSequentialStatement(item)) {
-          sequential.add(item);
-        } else {
-          combinational.add(item);
-        }
+        _generateLooseStatement(item);
+        continue;
       }
-    }
-
-    for (final item in directItems) {
-      if (item is ContinuousAssignment) {
-        _generateContinuousAssignment(item);
-      } else if (item is AssignmentStatement &&
-          item.type == AssignmentType.continuous) {
-        _generateAssignmentStatement(item);
-      } else if (item is ModuleInstantiation) {
-        _generateModuleInstantiation(item);
-      } else if (item is GenerateBlock) {
-        _generateGenerateBlock(item);
-      } else if (item is RawCodeItem) {
-        _generateRawCode(item);
-      } else if (item is InitialBlock) {
-        _generateInitialBlock(item);
-      }
-    }
-
-    if (combinational.isNotEmpty) {
-      _writeLine();
-      _writeLine('Combinational([');
-      _indent();
-      for (final stmt in combinational) {
-        _emitStatement(stmt, asListItem: true);
-      }
-      _dedent();
-      _writeLine(']);');
-    }
-
-    if (sequential.isNotEmpty) {
-      final clockName = _clockSignalName(module);
-      _writeLine();
-      if (clockName == null) {
-        _writeLine('// TODO: missing clock for sequential logic');
-        _writeLine('Combinational([');
-      } else {
-        _writeLine('Sequential($clockName, [');
-      }
-      _indent();
-      for (final stmt in sequential) {
-        _emitStatement(stmt, asListItem: true);
-      }
-      _dedent();
-      _writeLine(']);');
+      diagnostics?.warning(
+        'unsupported module item ${item.nodeType} skipped',
+        code: 'GEN0022',
+      );
     }
   }
 
-  void _emitStatement(IrStatement stmt, {required bool asListItem}) {
-    final temp = StringBuffer();
-    stmtGen.generate(temp, stmt, asListItem: asListItem);
-    final lines = temp.toString().split('\n');
+  void _generateAlways(AlwaysBlock block) {
+    _writeLine();
+    if (block.kind == BlockKind.alwaysFf) {
+      var clock = block.clock != null
+          ? namingStrategy.toCamelCase(block.clock!)
+          : _clockHeuristic();
+      if (clock == null) {
+        _writeLine('// TODO: no clock found for sequential block');
+        clock = 'Logic()';
+      }
+      final clockExpr = block.negedgeClock ? '~$clock' : clock;
+      _writeLine('Sequential($clockExpr, [');
+    } else {
+      if (block.kind == BlockKind.alwaysLatch) {
+        _writeLine('// always_latch approximated with Combinational');
+      }
+      _writeLine('Combinational([');
+    }
+    _indent();
+    for (final line in _stmtGen.lines(block.body, asListItem: true)) {
+      _writeLine(line);
+    }
+    _dedent();
+    _writeLine(']);');
+  }
+
+  void _generateContinuous(IrExpression target, IrExpression value) {
+    final lines = _stmtGen.lines(
+      AssignmentStatement(
+        location: target.location,
+        target: target,
+        value: value,
+        type: AssignmentType.continuous,
+      ),
+      asListItem: false,
+    );
     for (final line in lines) {
-      if (line.isEmpty) continue;
       _writeLine(line);
     }
   }
 
-  void _generateContinuousAssignment(ContinuousAssignment assign) {
-    final target = exprGen.generate(assign.target);
-    final value = _valueForContinuous(assign.value, target);
-    _writeLine('$target <= $value;');
-  }
-
-  void _generateAssignmentStatement(AssignmentStatement assign) {
-    final target = exprGen.generate(assign.target);
-    final value = _valueForContinuous(assign.value, target);
-    _writeLine('$target <= $value;');
-  }
-
-  String _valueForContinuous(IrExpression value, String target) {
-    if (value is LiteralExpression) {
-      final literal = exprGen.generate(value);
-      return 'Const($literal, width: $target.width)';
+  void _generateForGenerate(ForGenerateBlock block) {
+    final init = block.initialization;
+    var varName = 'i';
+    var initial = '0';
+    if (init is AssignmentStatement && init.target is IdentifierExpression) {
+      varName = namingStrategy
+          .toCamelCase((init.target as IdentifierExpression).identifier);
+      initial = _exprGen.generateInt(init.value);
     }
-    return exprGen.generate(value);
+    final condition = block.condition != null
+        ? _exprGen.generateInt(block.condition!)
+        : 'false';
+    final step = _stepText(varName, block.step);
+
+    _writeLine();
+    _writeLine('for (var $varName = $initial; $condition; $step) {');
+    _indent();
+    _generateItems(block.body.items, topLevel: false);
+    _dedent();
+    _writeLine('}');
   }
 
-  void _generateInitialBlock(InitialBlock block) {
-    _writeLine('// Initial block - use Simulator for testbenches');
+  String _stepText(String varName, IrStatement step) {
+    if (step is AssignmentStatement && step.target is IdentifierExpression) {
+      final target = namingStrategy
+          .toCamelCase((step.target as IdentifierExpression).identifier);
+      final value = step.value;
+      if (value is BinaryExpression &&
+          value.operator == BinaryOperator.add &&
+          value.left is IdentifierExpression &&
+          namingStrategy.toCamelCase(
+                  (value.left as IdentifierExpression).identifier) ==
+              target &&
+          value.right is LiteralExpression &&
+          (value.right as LiteralExpression).value == 1) {
+        return '$target++';
+      }
+      return '$target = ${_exprGen.generateInt(value)}';
+    }
+    return '$varName++';
   }
 
-  void _generateModuleInstantiation(ModuleInstantiation inst) {
+  void _generateIfGenerate(IfGenerateBlock block) {
+    _writeLine();
+    _writeLine('if (${_exprGen.generateInt(block.condition)}) {');
+    _indent();
+    _generateItems(block.thenBranch.items, topLevel: false);
+    _dedent();
+    if (block.elseBranch != null) {
+      _writeLine('} else {');
+      _indent();
+      _generateItems(block.elseBranch!.items, topLevel: false);
+      _dedent();
+    }
+    _writeLine('}');
+  }
+
+  void _generateInstantiation(ModuleInstantiation inst) {
     final instanceName = namingStrategy.toCamelCase(inst.instanceName);
     final className = namingStrategy.toClassName(inst.moduleName);
+    final target = _knownModules[inst.moduleName];
 
-    final conns = <String>[];
-    for (final conn in inst.portConnections) {
-      final portName = namingStrategy.toCamelCase(conn.portName);
-      if (conn.value != null) {
-        final value = exprGen.generate(conn.value!);
-        conns.add('$portName: $value');
+    _writeLine();
+    if (target == null) {
+      diagnostics?.warning(
+        "instantiated module '${inst.moduleName}' is not defined in this "
+        'file; connections passed positionally',
+        code: 'GEN0023',
+      );
+      final args = [
+        for (final conn in inst.portConnections)
+          if (conn.value != null) _exprGen.generateLogic(conn.value!),
+      ];
+      _writeLine('// TODO: verify connections for external module '
+          "'${inst.moduleName}'");
+      _writeLine('final $instanceName = $className(${args.join(', ')});');
+      return;
+    }
+
+    // Resolve connections by name (positional entries use $pos<i> keys).
+    final byName = <String, IrExpression?>{};
+    for (var i = 0; i < inst.portConnections.length; i++) {
+      final conn = inst.portConnections[i];
+      if (conn.portName.startsWith(r'$pos')) {
+        final index = int.tryParse(conn.portName.substring(4)) ?? i;
+        if (index < target.ports.length) {
+          byName[target.ports[index].name] = conn.value;
+        }
       } else {
-        conns.add(portName);
+        byName[conn.portName] = conn.value;
       }
     }
 
-    _writeLine('final $instanceName = $className(${conns.join(', ')});');
-  }
-
-  void _generateGenerateBlock(GenerateBlock block) {
-    for (final item in block.items) {
-      if (item is RawCodeItem) {
-        _generateRawCode(item);
+    final args = <String>[];
+    for (final port in target.ports) {
+      if (port.direction == PortDirection.output) continue;
+      final conn = byName[port.name];
+      if (conn == null) {
+        diagnostics?.warning(
+          "input '${port.name}' of instance '${inst.instanceName}' is "
+          'unconnected; tied to 0',
+          code: 'GEN0024',
+        );
+        args.add('Const(0, width: ${_widthString(port.width)})');
+      } else {
+        args.add(_exprGen.generateLogic(conn));
       }
+    }
+
+    final paramArgs = <String>[];
+    for (var i = 0; i < inst.parameterValues.length; i++) {
+      if (i < target.parameters.length) {
+        final name = namingStrategy.toCamelCase(target.parameters[i].name);
+        paramArgs
+            .add('$name: ${_exprGen.generateInt(inst.parameterValues[i])}');
+      }
+    }
+    for (final conn in inst.parameterConnections) {
+      if (conn.value == null) continue;
+      final name = namingStrategy.toCamelCase(conn.portName);
+      paramArgs.add('$name: ${_exprGen.generateInt(conn.value!)}');
+    }
+    args.addAll(paramArgs);
+
+    _writeLine('final $instanceName = $className(${args.join(', ')});');
+
+    for (final port in target.ports) {
+      if (port.direction != PortDirection.output) continue;
+      final conn = byName[port.name];
+      if (conn == null) continue;
+      final targetStr = _exprGen.generate(conn);
+      final portField = namingStrategy.toCamelCase(port.name);
+      _writeLine('$targetStr <= $instanceName.$portField;');
     }
   }
 
-  void _generateRawCode(RawCodeItem item) {
-    for (final line in item.code.split('\n')) {
-      if (line.trim().isEmpty) continue;
+  /// Legacy path for IR built directly from statements (API users):
+  /// statements containing non-blocking assignments become a Sequential
+  /// block; everything else combinational.
+  void _generateLooseStatement(IrStatement stmt) {
+    if (stmt is AssignmentStatement && stmt.type == AssignmentType.continuous) {
+      _generateContinuous(stmt.target, stmt.value);
+      return;
+    }
+    final sequential = _containsNonBlocking(stmt);
+    _writeLine();
+    if (sequential) {
+      final clock = _clockHeuristic();
+      if (clock == null) {
+        _writeLine('// TODO: no clock found for sequential logic');
+      }
+      _writeLine('Sequential(${clock ?? 'Logic()'}, [');
+    } else {
+      _writeLine('Combinational([');
+    }
+    _indent();
+    for (final line in _stmtGen.lines(stmt, asListItem: true)) {
       _writeLine(line);
     }
-  }
-
-  bool _isSequentialStatement(IrStatement stmt) {
-    return _containsNonBlocking(stmt);
+    _dedent();
+    _writeLine(']);');
   }
 
   bool _containsNonBlocking(IrStatement stmt) {
     if (stmt is AssignmentStatement) {
       return stmt.type == AssignmentType.nonBlocking;
     }
-    if (stmt is NonBlockingAssignmentStatement) {
-      return true;
-    }
+    if (stmt is NonBlockingAssignmentStatement) return true;
     if (stmt is IfStatement) {
       return _containsNonBlocking(stmt.thenBranch) ||
           (stmt.elseBranch != null && _containsNonBlocking(stmt.elseBranch!));
@@ -387,17 +563,10 @@ class RohdGenerator {
       }
     }
     if (stmt is SequentialBlock) {
-      for (final s in stmt.statements) {
-        if (_containsNonBlocking(s)) {
-          return true;
-        }
-      }
+      return stmt.statements.any(_containsNonBlocking);
     }
     if (stmt is ForLoopStatement) {
-      return _containsNonBlocking(stmt.body) ||
-          (stmt.initialization != null &&
-              _containsNonBlocking(stmt.initialization!)) ||
-          (stmt.step != null && _containsNonBlocking(stmt.step!));
+      return _containsNonBlocking(stmt.body);
     }
     if (stmt is WhileLoopStatement) {
       return _containsNonBlocking(stmt.body);
@@ -405,40 +574,57 @@ class RohdGenerator {
     return false;
   }
 
-  String? _clockSignalName(ModuleDeclaration module) {
-    for (final port in module.ports) {
-      final lower = port.name.toLowerCase();
+  String? _clockHeuristic() {
+    for (final entry in _wa.signalWidths.keys) {
+      final lower = entry.toLowerCase();
       if (lower == 'clk' || lower == 'clock') {
-        return namingStrategy.toCamelCase(port.name);
-      }
-    }
-    for (final port in module.ports) {
-      if (port.direction == PortDirection.input) {
-        return namingStrategy.toCamelCase(port.name);
+        return namingStrategy.toCamelCase(entry);
       }
     }
     return null;
   }
 
-  String _getWidth(VectorWidth? width) {
+  // ── Widths ───────────────────────────────────────────────────────
+
+  String _widthString(VectorWidth? width) {
     if (width == null) return '1';
-    final msb = width.msb;
-    final lsb = width.lsb;
-
-    // Try to parse as integer expressions
-    if (msb is LiteralExpression && lsb is LiteralExpression) {
-      final widthInt = msb.value as int;
-      final lsbInt = lsb.value as int;
-      return ((widthInt - lsbInt).abs() + 1).toString();
-    }
-
-    // todo: validate and harden the ir tree to ensure msb and lsb are always present and valid for width declarations
-    // For parameterized widths, default to an impossible value
-    return '-1'; // Default width for parameterized signals
+    final form = _wa.widthOfVector(width);
+    if (form != null) return form.render();
+    final msb = width.msb != null ? _exprGen.generateInt(width.msb!) : '0';
+    final lsb = width.lsb != null ? _exprGen.generateInt(width.lsb!) : '0';
+    return '($msb) - ($lsb) + 1';
   }
 
+  /// Number of elements in an unpacked dimension, valid for either
+  /// `[0:N-1]` or `[N-1:0]` orientation.
+  String _dimensionCount(VectorWidth dim) {
+    final msb = _wa.linearOf(dim.msb);
+    final lsb = _wa.linearOf(dim.lsb);
+    if (msb != null && lsb != null) {
+      final diff = msb - lsb;
+      if (diff.isConstant) {
+        return '${diff.constant.abs() + 1}';
+      }
+      final names = diff.coeffs.keys.toList()..sort();
+      final leading = names
+          .map((n) => diff.coeffs[n]!)
+          .firstWhere((c) => c != 0, orElse: () => 1);
+      final oriented = leading < 0
+          ? (lsb - msb) + LinearExpr.constant(1)
+          : diff + LinearExpr.constant(1);
+      return oriented.render();
+    }
+    return '1';
+  }
+
+  // ── Output helpers ───────────────────────────────────────────────
+
   void _writeLine([String text = '']) {
-    _buffer.writeln('${'  ' * _indentLevel}$text');
+    if (text.isEmpty) {
+      _buffer.writeln();
+    } else {
+      _buffer.writeln('${'  ' * _indentLevel}$text');
+    }
   }
 
   void _indent() {
