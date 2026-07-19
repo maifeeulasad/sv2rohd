@@ -135,6 +135,23 @@ void main() {
       expect(strategy.toClassName('foo'), 'Foo');
       expect(strategy.toCamelCase('foo'), 'foo');
     });
+
+    test('escapes Dart reserved words in camelCase names', () {
+      const strategy = NamingStrategy();
+      expect(strategy.toCamelCase('in'), 'in_');
+      expect(strategy.toCamelCase('is'), 'is_');
+      expect(strategy.toCamelCase('switch'), 'switch_');
+      expect(strategy.toCamelCase('new'), 'new_');
+      // Non-keywords are untouched.
+      expect(strategy.toCamelCase('input'), 'input');
+      expect(strategy.toCamelCase('data'), 'data');
+    });
+
+    test('escapes the one PascalCase-shaped reserved word (Function)', () {
+      const strategy = NamingStrategy();
+      expect(strategy.toClassName('function'), 'Function_');
+      expect(strategy.toClassName('func'), 'Func');
+    });
   });
 
   group('SignalGenerator', () {
