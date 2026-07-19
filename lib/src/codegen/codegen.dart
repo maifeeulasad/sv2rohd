@@ -10,3 +10,4 @@ export 'generate_block_generator.dart';
 export 'statement_generator.dart';
 export 'testbench_generator.dart';
 export 'naming_strategy.dart';
+export 'width_analyzer.dart';
