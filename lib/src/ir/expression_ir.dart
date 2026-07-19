@@ -121,11 +121,20 @@ class LiteralExpression extends IrExpression {
   /// Bit width for sized literals such as `3'd5`; null when unsized.
   final int? width;
 
+  /// MSB-first four-state bit pattern (using '0'/'1'/'x'/'z') for sized
+  /// literals whose digits contain `x`/`z`, e.g. `4'b1z0z` -> `'1z0z'`.
+  /// Null when the literal has no four-state digits, or its radix doesn't
+  /// support preserving them per-bit (e.g. decimal). Used by casex/casez
+  /// code generation to build a proper wildcard-matching value instead of
+  /// collapsing x/z to a plain 0 (see [value], which does that collapse).
+  final String? wildcardBits;
+
   LiteralExpression({
     required super.location,
     required this.kind,
     required this.value,
     this.width,
+    this.wildcardBits,
   });
 
   @override

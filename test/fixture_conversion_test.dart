@@ -127,6 +127,26 @@ void main() {
       );
     });
 
+    test(
+        'casez_wildcard preserves wildcard bits instead of collapsing them '
+        'to 0', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/casez_wildcard.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/casez_wildcard.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      expect(output, contains('CaseZ(bits, ['));
+      expect(output, contains("Const(LogicValue.ofString('1zzz'))"));
+      expect(output, contains("Const(LogicValue.ofString('01zz'))"));
+      expect(output, contains("Const(LogicValue.ofString('001z'))"));
+      // The one case item with no wildcard digits keeps the plain form.
+      expect(output, contains('Const(1, width: bits.width)'));
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');

@@ -246,9 +246,7 @@ class StatementGenerator {
     final result = <String>['$caseClass($selector, ['];
     for (final item in stmt.items) {
       for (final value in item.values) {
-        final rendered = value is LiteralExpression
-            ? 'Const(${value.value}, width: $selectorRef.width)'
-            : exprGen.generateLogic(value, widthContext: selectorRef);
+        final rendered = _caseItemValue(value, stmt.kind, selectorRef);
         result.add('  CaseItem($rendered, [');
         if (item.statement != null) {
           result.addAll(_indented(_branchLines(item.statement!), 2));
@@ -262,6 +260,20 @@ class StatementGenerator {
     }
     result.add('])$suffix');
     return result;
+  }
+
+  /// Renders a single case-item value, preserving x/z wildcard bits for
+  /// `casez`/`casex` (see [LiteralExpression.wildcardBits]) instead of
+  /// collapsing them to a literal 0, since `CaseZ` matches wildcard bits
+  /// via the item value's own `z` digits, not the case kind alone.
+  String _caseItemValue(IrExpression value, CaseKind kind, String selectorRef) {
+    if (value is LiteralExpression) {
+      if (kind != CaseKind.normal && value.wildcardBits != null) {
+        return "Const(LogicValue.ofString('${value.wildcardBits}'))";
+      }
+      return 'Const(${value.value}, width: $selectorRef.width)';
+    }
+    return exprGen.generateLogic(value, widthContext: selectorRef);
   }
 
   List<String> _forLines(ForLoopStatement stmt, {required bool asListItem}) {

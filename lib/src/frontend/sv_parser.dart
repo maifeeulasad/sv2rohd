@@ -1861,11 +1861,7 @@ class SvParser {
       rest = rest.substring(1);
     }
     final baseChar = rest.isNotEmpty ? rest[0].toLowerCase() : 'd';
-    var valueText = rest.length > 1 ? rest.substring(1) : '';
-    if (valueText.contains(RegExp('[xXzZ?]'))) {
-      _warn("x/z digits in '${token.text}' converted to 0");
-      valueText = valueText.replaceAll(RegExp('[xXzZ?]'), '0');
-    }
+    final rawDigits = rest.length > 1 ? rest.substring(1) : '';
 
     final radix = switch (baseChar) {
       'b' => 2,
@@ -1873,15 +1869,68 @@ class SvParser {
       'h' => 16,
       _ => 10,
     };
-    final value = int.tryParse(valueText, radix: radix) ?? 0;
     final width = sizeText.isNotEmpty ? int.tryParse(sizeText) : null;
+
+    String? wildcardBits;
+    var valueText = rawDigits;
+    if (rawDigits.contains(RegExp('[xXzZ?]'))) {
+      if (width != null) {
+        wildcardBits = _expandToBitString(rawDigits, radix, width);
+      }
+      if (wildcardBits == null) {
+        _warn("x/z digits in '${token.text}' converted to 0");
+      }
+      valueText = rawDigits.replaceAll(RegExp('[xXzZ?]'), '0');
+    }
+
+    final value = int.tryParse(valueText, radix: radix) ?? 0;
 
     return LiteralExpression(
       location: _loc(token),
       kind: LiteralKind.bitVector,
       value: value,
       width: width,
+      wildcardBits: wildcardBits,
     );
+  }
+
+  /// Expands [digits] (in the given [radix]: 2, 8, or 16) into an MSB-first
+  /// four-state bit string of exactly [width] bits, treating `x`/`z`/`?`
+  /// digits as fully unknown/wildcard across all bits they represent (e.g.
+  /// a single `z` hex digit becomes `zzzz`). Returns null when the radix
+  /// can't be expanded per-bit (decimal) or a digit is invalid.
+  String? _expandToBitString(String digits, int radix, int width) {
+    final bitsPerDigit = switch (radix) {
+      2 => 1,
+      8 => 3,
+      16 => 4,
+      _ => 0,
+    };
+    if (bitsPerDigit == 0) return null;
+
+    final buffer = StringBuffer();
+    for (final ch in digits.split('')) {
+      final lower = ch.toLowerCase();
+      if (lower == 'x') {
+        buffer.write('x' * bitsPerDigit);
+        continue;
+      }
+      if (lower == 'z' || lower == '?') {
+        buffer.write('z' * bitsPerDigit);
+        continue;
+      }
+      final digitValue = int.tryParse(ch, radix: radix);
+      if (digitValue == null) return null;
+      buffer.write(digitValue.toRadixString(2).padLeft(bitsPerDigit, '0'));
+    }
+
+    var bits = buffer.toString();
+    if (bits.length < width) {
+      bits = bits.padLeft(width, '0');
+    } else if (bits.length > width) {
+      bits = bits.substring(bits.length - width);
+    }
+    return bits;
   }
 
   // ── Recovery helpers ─────────────────────────────────────────────

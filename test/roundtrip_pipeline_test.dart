@@ -23,6 +23,7 @@ void main() {
       const _Fixture('multiplier', 'fixtures/sv_samples/multiplier.sv'),
       const _Fixture('hierarchy', 'fixtures/sv_samples/hierarchy.sv'),
       const _Fixture('async_reset', 'fixtures/sv_samples/async_reset.sv'),
+      const _Fixture('casez_wildcard', 'fixtures/sv_samples/casez_wildcard.sv'),
     ];
 
     for (final fixture in fixtures) {
@@ -161,7 +162,8 @@ void _assertSimilarity(ModuleDeclaration module, String sv) {
   }
 
   if (_hasCase(module)) {
-    expect(RegExp('\\bcase\\b').hasMatch(sv), isTrue);
+    // Generated SV may render as `case`, `casez`, or `casex`.
+    expect(RegExp('\\bcase[zx]?\\b').hasMatch(sv), isTrue);
   }
 }
 
@@ -194,6 +196,9 @@ bool _hasCombinational(ModuleDeclaration module) {
 bool _hasCase(ModuleDeclaration module) {
   for (final item in module.items) {
     if (item is CaseStatement) {
+      return true;
+    }
+    if (item is AlwaysBlock && _containsCase(item.body)) {
       return true;
     }
     if (item is IrStatement && _containsCase(item)) {
