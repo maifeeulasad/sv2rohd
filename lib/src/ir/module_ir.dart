@@ -149,12 +149,22 @@ class AlwaysBlock extends IrNode {
   /// True when the clock edge in the sensitivity list is negedge.
   final bool negedgeClock;
 
+  /// A second edge-triggered signal in the sensitivity list (e.g. `rst_n` in
+  /// `always_ff @(posedge clk or negedge rst_n)`), indicating an
+  /// asynchronous reset; null when the block has a single trigger.
+  final String? asyncResetSignal;
+
+  /// True when [asyncResetSignal]'s edge is negedge (active-low reset).
+  final bool asyncResetActiveLow;
+
   AlwaysBlock({
     required super.location,
     required this.kind,
     required this.body,
     this.clock,
     this.negedgeClock = false,
+    this.asyncResetSignal,
+    this.asyncResetActiveLow = false,
   });
 
   @override

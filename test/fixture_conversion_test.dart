@@ -95,6 +95,38 @@ void main() {
       expect(output, contains('product <= resultReg;'));
     });
 
+    test(
+        'async_reset uses Sequential reset/resetValues sugar and warns '
+        'about the async-reset limitation', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/async_reset.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/async_reset.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      expect(output, contains('class AsyncResetReg extends Module'));
+      expect(output, contains('Sequential(clk, ['));
+      expect(output, contains('q < d'));
+      expect(output, contains('], reset: ~rstN, resetValues: {'));
+      expect(output, contains('q: 0,'));
+
+      // The installed ROHD version has no async-trigger primitive, so this
+      // must always be flagged rather than silently modeled as synchronous.
+      expect(
+        converter.diagnostics.warnings.map((d) => d.code),
+        contains('GEN0026'),
+      );
+      expect(
+        converter.diagnostics.warnings
+            .map((d) => d.message)
+            .any((m) => m.contains('synchronous-equivalent')),
+        isTrue,
+      );
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');
