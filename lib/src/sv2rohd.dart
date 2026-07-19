@@ -181,9 +181,17 @@ Options:
       print('Output written to $outputPath');
     }
 
+    final verbose = results['verbose'] == true;
+    for (final diagnostic in converter.diagnostics.diagnostics) {
+      if (diagnostic.isInfo && !verbose) continue;
+      print(diagnostic.formatted);
+    }
+
     if (converter.hasErrors) {
-      print('Errors: ${converter.diagnosticSummary}');
+      print('Conversion finished with ${converter.diagnosticSummary}');
       exitCode = 1;
+    } else if (converter.diagnostics.hasWarnings) {
+      print('Conversion finished with ${converter.diagnosticSummary}');
     }
   } catch (e) {
     print('Error: $e');
