@@ -6,3 +6,4 @@ export 'preprocessor.dart';
 export 'lexer_adapter.dart';
 export 'parser_adapter.dart';
 export 'frontend_engine.dart';
+export 'sv_parser.dart';
