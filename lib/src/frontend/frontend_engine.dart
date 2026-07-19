@@ -3,14 +3,18 @@
 
 import 'dart:io';
 
-import 'package:antlr4/antlr4.dart';
 import '../common/common.dart';
 import 'source_text.dart';
 import 'preprocessor.dart';
-import 'lexer_adapter.dart';
-import 'parser_adapter.dart';
 
 /// Main frontend component that orchestrates parsing.
+///
+/// Only runs the preprocessor: actual lexing/parsing of the preprocessed
+/// text into IR is done by [SvParser] (see `sv_parser.dart`), which reads
+/// [ParsedModule.sourceText] directly. An earlier ANTLR-generated grammar
+/// used to run here too, but it never produced usable output and its parse
+/// errors were pure noise; see the `lib/generated/grammar` sources if that
+/// grammar is ever revived for something else.
 class Frontend {
   final DiagnosticCollector diagnostics;
   final List<IncludePath> includePaths;
@@ -30,12 +34,11 @@ class Frontend {
     return parseSource(source, sourceName: path);
   }
 
-  /// Parses source text and returns the compilation unit.
+  /// Preprocesses source text and wraps it for downstream parsing.
   ParsedModule parseSource(
     String source, {
     String? sourceName,
   }) {
-    // Preprocess
     final preprocessor = Preprocessor(
       diagnostics: diagnostics,
       includePaths: includePaths,
@@ -44,28 +47,7 @@ class Frontend {
     final preprocessed =
         preprocessor.preprocess(source, sourceName: sourceName);
 
-    // Tokenize
-    final lexer = LexerAdapter(
-      sourceName: sourceName ?? 'unknown',
-      source: preprocessed.text,
-      diagnostics: diagnostics,
-    );
-    final tokens = lexer.tokenize();
-
-    // Parse
-    final parser = ParserAdapter(
-      sourceName: sourceName ?? 'unknown',
-      sourceText: preprocessed.text,
-      tokens: tokens,
-      diagnostics: diagnostics,
-    );
-
-    // Wrap the parse result
-    return ParsedModule(
-      sourceText: preprocessed,
-      tokens: tokens,
-      compilationUnit: parser.parse(),
-    );
+    return ParsedModule(sourceText: preprocessed);
   }
 
   /// Reads a file from the filesystem.
@@ -78,18 +60,9 @@ class Frontend {
   }
 }
 
-/// Result of parsing a module.
+/// Result of preprocessing a source file, ready for [SvParser].
 class ParsedModule {
   final SourceText sourceText;
-  final List<Token> tokens;
-  final dynamic compilationUnit;
 
-  const ParsedModule({
-    required this.sourceText,
-    required this.tokens,
-    required this.compilationUnit,
-  });
-
-  /// Returns true if parsing was successful (no errors).
-  bool get isSuccess => true; // Would check for parser errors
+  const ParsedModule({required this.sourceText});
 }

@@ -231,6 +231,19 @@ class ExpressionGenerator {
     if (base is IdentifierExpression &&
         arraySignals.contains(base.identifier)) {
       final name = namingStrategy.toCamelCase(base.identifier);
+      if (!isIntDomain(expr.index)) {
+        // `name` is a Dart `List<Logic>`; its `[]` operator requires an
+        // `int`, so a runtime (non-elaboration-time) index here is
+        // guaranteed not to compile. Fail loudly instead of emitting code
+        // that silently looks like a successful conversion.
+        diagnostics?.error(
+          "array '${base.identifier}' is indexed with a runtime signal, "
+          'but unpacked-array elements can only be selected with a '
+          'compile-time constant (a parameter or genvar); dynamic array '
+          'indexing is not supported',
+          code: 'GEN0025',
+        );
+      }
       return '$name[${generateInt(expr.index)}]';
     }
     final baseStr = _postfixOperand(generate(base));
