@@ -282,6 +282,14 @@ class ExpressionAnalyzer {
         return ~operand;
       case UnaryOperator.logicalNot:
         return operand == 0 ? 1 : 0;
+      case UnaryOperator.reductionAnd:
+      case UnaryOperator.reductionOr:
+      case UnaryOperator.reductionXor:
+      case UnaryOperator.reductionNand:
+      case UnaryOperator.reductionNor:
+      case UnaryOperator.reductionXnor:
+        // Reductions are not constant-folded.
+        return null;
     }
   }
 

@@ -247,6 +247,14 @@ class TypeAnalyzer {
       case UnaryOperator.minus:
         // Unary +/-: result width = operand width + 1
         return TypeInfo.logic((operandType.width ?? 1) + 1, signed: true);
+      case UnaryOperator.reductionAnd:
+      case UnaryOperator.reductionOr:
+      case UnaryOperator.reductionXor:
+      case UnaryOperator.reductionNand:
+      case UnaryOperator.reductionNor:
+      case UnaryOperator.reductionXnor:
+        // Reduction operators produce a single bit.
+        return TypeInfo.logic1();
     }
   }
 

@@ -84,6 +84,12 @@ enum UnaryOperator {
   minus,
   bitwiseNot,
   logicalNot,
+  reductionAnd,
+  reductionOr,
+  reductionXor,
+  reductionNand,
+  reductionNor,
+  reductionXnor,
 }
 
 /// Represents an identifier reference.
@@ -112,10 +118,14 @@ class LiteralExpression extends IrExpression {
   final LiteralKind kind;
   final dynamic value;
 
+  /// Bit width for sized literals such as `3'd5`; null when unsized.
+  final int? width;
+
   LiteralExpression({
     required super.location,
     required this.kind,
     required this.value,
+    this.width,
   });
 
   @override
@@ -151,6 +161,27 @@ class ConcatenationExpression extends IrExpression {
 
   @override
   String get nodeType => 'ConcatenationExpression';
+
+  @override
+  T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(this);
+}
+
+/// Represents a replication expression (e.g., {N{expr}}).
+class ReplicationExpression extends IrExpression {
+  final IrExpression count;
+  final IrExpression operand;
+
+  ReplicationExpression({
+    required super.location,
+    required this.count,
+    required this.operand,
+  });
+
+  @override
+  List<IrNode> get children => [count, operand];
+
+  @override
+  String get nodeType => 'ReplicationExpression';
 
   @override
   T accept<T>(IrVisitor<T> visitor) => visitor.visitExpression(this);

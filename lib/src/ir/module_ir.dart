@@ -43,11 +43,15 @@ class ParameterDeclaration extends IrDeclaration {
   final IrExpression? defaultValue;
   final IrType? type;
 
+  /// True for `localparam` declarations, which are not overridable.
+  final bool isLocal;
+
   ParameterDeclaration({
     required super.location,
     required super.name,
     this.defaultValue,
     this.type,
+    this.isLocal = false,
   });
 
   @override
@@ -102,6 +106,10 @@ class SignalDeclaration extends IrDeclaration {
   final VectorWidth? width;
   final IrExpression? initialValue;
 
+  /// Unpacked (array) dimensions, e.g. `[0:DEPTH-1]` in
+  /// `logic [7:0] mem [0:DEPTH-1];`. Empty for plain signals.
+  final List<VectorWidth> unpackedDims;
+
   SignalDeclaration({
     required super.location,
     required super.name,
@@ -109,6 +117,7 @@ class SignalDeclaration extends IrDeclaration {
     this.type,
     this.width,
     this.initialValue,
+    this.unpackedDims = const [],
   });
 
   @override
@@ -133,10 +142,19 @@ class AlwaysBlock extends IrNode {
   final BlockKind kind;
   final IrStatement body;
 
+  /// Clock signal name from the sensitivity list (e.g. `clk` in
+  /// `always_ff @(posedge clk)`); null for combinational blocks.
+  final String? clock;
+
+  /// True when the clock edge in the sensitivity list is negedge.
+  final bool negedgeClock;
+
   AlwaysBlock({
     required super.location,
     required this.kind,
     required this.body,
+    this.clock,
+    this.negedgeClock = false,
   });
 
   @override
@@ -196,6 +214,9 @@ class ModuleInstantiation extends IrNode {
   final String moduleName;
   final String instanceName;
   final List<IrExpression> parameterValues;
+
+  /// Named parameter overrides, e.g. `#(.WIDTH(16))`.
+  final List<PortConnection> parameterConnections;
   final List<PortConnection> portConnections;
 
   ModuleInstantiation({
@@ -203,6 +224,7 @@ class ModuleInstantiation extends IrNode {
     required this.moduleName,
     required this.instanceName,
     this.parameterValues = const [],
+    this.parameterConnections = const [],
     this.portConnections = const [],
   });
 
