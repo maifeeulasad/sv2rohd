@@ -1,7 +1,6 @@
 name: sv2rohd
 description: SystemVerilog to ROHD converter - translates SystemVerilog hardware designs to ROHD Dart code
-version: 0.0.0
-author: Maifee Ul Asad
+version: 0.1.0
 homepage: https://github.com/maifeeulasad/sv2rohd
 repository: https://github.com/maifeeulasad/sv2rohd
 issue_tracker: https://github.com/maifeeulasad/sv2rohd/issues

@@ -67,8 +67,6 @@ class IrPrinter extends DefaultIrVisitor<String> {
         return 'output';
       case PortDirection.inout:
         return 'inout';
-      default:
-        return 'unknown';
     }
   }
 

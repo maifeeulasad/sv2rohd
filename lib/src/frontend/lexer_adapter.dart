@@ -12,7 +12,6 @@ class LexerAdapter {
   final String source;
   final DiagnosticCollector diagnostics;
   final List<Token> _tokens = [];
-  int _position = 0;
 
   LexerAdapter({
     required this.sourceName,

@@ -65,7 +65,8 @@ class TestbenchGenerator {
     // Wait for completion
     if (test.duration != null) {
       final duration = exprGen.generate(test.duration!);
-      buffer.writeln('await Simulator().run();');
+      buffer.writeln('Simulator.setMaxSimTime($duration);');
+      buffer.writeln('await Simulator.run();');
     }
 
     _dedent();
@@ -157,10 +158,6 @@ class TestbenchGenerator {
     if (_indentLevel > 0) {
       _indentLevel--;
     }
-  }
-
-  void _writeLine(StringBuffer buffer, String text) {
-    buffer.writeln('${'  ' * _indentLevel}$text');
   }
 }
 

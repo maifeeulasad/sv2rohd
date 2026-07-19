@@ -43,7 +43,6 @@ class SourceLocation {
 
     int line = 1;
     int column = 1;
-    int currentOffset = 0;
 
     for (int i = 0; i < offset; i++) {
       if (sourceText[i] == '\n') {
@@ -52,7 +51,6 @@ class SourceLocation {
       } else {
         column++;
       }
-      currentOffset = i + 1;
     }
 
     return SourceLocation(
