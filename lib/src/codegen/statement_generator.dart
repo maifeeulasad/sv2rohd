@@ -136,6 +136,12 @@ class StatementGenerator {
       // Integer constants are sized by ROHD from the assignment context.
       return exprGen.generate(value);
     }
+    // A ternary assigned to a wider target must size its constant branches to
+    // the target, otherwise each `Const` defaults to a single bit.
+    if (value is ConditionalExpression) {
+      final targetRef = _postfix(exprGen.generate(target));
+      return exprGen.generateConditional(value, widthContext: targetRef);
+    }
     final targetWidth = wa.widthOfExpr(target);
     final valueWidth = wa.widthOfExpr(value);
     if (targetWidth == null || valueWidth == null) {

@@ -303,6 +303,10 @@ class SvParser {
   late final List<SvToken> _tokens;
   int _pos = 0;
 
+  /// User-defined enum typedef names mapped to their bit width, so later
+  /// declarations using the type (e.g. `state_t state;`) are recognized.
+  final Map<String, int> _enumTypeWidths = {};
+
   SvParser(
     String source, {
     required this.diagnostics,
@@ -587,6 +591,21 @@ class SvParser {
       return const [];
     }
 
+    if (t == 'typedef') {
+      return _parseTypedef();
+    }
+
+    if (t == 'enum') {
+      // Anonymous inline enum: `enum logic [1:0] {A,B} sig;`
+      return _parseInlineEnumDeclaration();
+    }
+
+    // Declaration using a previously defined enum typedef, e.g.
+    // `state_t state, next_state;`
+    if (_checkIdentifier() && _enumTypeWidths.containsKey(t)) {
+      return _parseTypedefSignalDeclaration();
+    }
+
     if (_varTypes.contains(t) ||
         _netTypes.contains(t) ||
         _intTypes.contains(t)) {
@@ -718,6 +737,175 @@ class SvParser {
     }
     _expect(';');
   }
+
+  /// Parses `typedef enum [base] { members } name;`. The enum members are
+  /// emitted as `localparam`-style constants (available in the int domain)
+  /// and the type name is registered so later declarations resolve to a
+  /// vector of the enum's width. Non-enum typedefs are skipped with a warning.
+  List<IrNode> _parseTypedef() {
+    _expect('typedef');
+    if (!_check('enum')) {
+      _warn('only `typedef enum` is supported; skipping this typedef');
+      _skipPast(';');
+      return const [];
+    }
+    final (width, members) = _parseEnumBody();
+    final typeName = _expectIdentifier('typedef name');
+    while (_check('[')) {
+      _skipBrackets(); // unpacked dims on the typedef itself are ignored
+    }
+    _expect(';');
+    _enumTypeWidths[typeName] = width;
+    return members;
+  }
+
+  /// Parses an anonymous inline enum declaration, e.g.
+  /// `enum logic [1:0] { A, B } state, next;`.
+  List<IrNode> _parseInlineEnumDeclaration() {
+    final (width, members) = _parseEnumBody();
+    final items = <IrNode>[...members];
+    while (true) {
+      final start = _current;
+      final name = _expectIdentifier('signal name');
+      items.add(SignalDeclaration(
+        location: _loc(start),
+        name: name,
+        signalType: SignalType.logic,
+        width: _constWidth(width, start),
+      ));
+      if (!_match(',')) break;
+    }
+    _expect(';');
+    return items;
+  }
+
+  /// Parses declarations of the form `state_t state, next_state;` where
+  /// `state_t` is a known enum typedef.
+  List<IrNode> _parseTypedefSignalDeclaration() {
+    final typeName = _advance().text;
+    final width = _enumTypeWidths[typeName]!;
+    final signals = <IrNode>[];
+    while (true) {
+      final start = _current;
+      final name = _expectIdentifier('signal name');
+      final unpackedDims = <VectorWidth>[];
+      while (_check('[')) {
+        unpackedDims.add(_parseVectorWidth());
+      }
+      signals.add(SignalDeclaration(
+        location: _loc(start),
+        name: name,
+        signalType: SignalType.logic,
+        width: _constWidth(width, start),
+        unpackedDims: unpackedDims,
+      ));
+      if (!_match(',')) break;
+    }
+    _expect(';');
+    return signals;
+  }
+
+  /// Parses `enum [base_type] { A, B=val, C }`, returning the enum bit width
+  /// and one localparam-style [ParameterDeclaration] per member. Members
+  /// without an explicit value continue numbering from the previous one.
+  (int, List<ParameterDeclaration>) _parseEnumBody() {
+    _expect('enum');
+    int? explicitWidth;
+    // Optional base type: `logic [W-1:0]`, `int`, `bit [3:0]`, etc.
+    if (_varTypes.contains(_current.text) ||
+        _intTypes.contains(_current.text)) {
+      final baseIsInt = _intTypes.contains(_current.text);
+      _advance();
+      while (_check('signed') || _check('unsigned')) {
+        _advance();
+      }
+      if (_check('[')) {
+        final w = _parseVectorWidth();
+        explicitWidth = _widthFromVector(w);
+      } else if (baseIsInt) {
+        explicitWidth = 32;
+      }
+    }
+
+    _expect('{');
+    final members = <ParameterDeclaration>[];
+    var nextValue = 0;
+    while (!_check('}') && !_current.isEof) {
+      final start = _current;
+      final name = _expectIdentifier('enum member');
+      if (_match('=')) {
+        final valueExpr = _parseExpression();
+        members.add(ParameterDeclaration(
+          location: _loc(start),
+          name: name,
+          defaultValue: valueExpr,
+          isLocal: true,
+        ));
+        if (valueExpr is LiteralExpression && valueExpr.value is int) {
+          nextValue = (valueExpr.value as int) + 1;
+        }
+      } else {
+        members.add(ParameterDeclaration(
+          location: _loc(start),
+          name: name,
+          defaultValue: LiteralExpression(
+            location: _loc(start),
+            kind: LiteralKind.integer,
+            value: nextValue,
+          ),
+          isLocal: true,
+        ));
+        nextValue++;
+      }
+      if (!_match(',')) break;
+    }
+    _expect('}');
+
+    final width = explicitWidth ?? _minWidthFor(members.length);
+    if (explicitWidth == null) {
+      _warn('enum has no explicit base type; inferring a ${width}-bit width '
+          'from ${members.length} members');
+    }
+    return (width, members);
+  }
+
+  /// Minimum number of bits needed to represent [count] distinct values.
+  int _minWidthFor(int count) {
+    if (count <= 1) return 1;
+    var bits = 0;
+    var capacity = 1;
+    while (capacity < count) {
+      capacity <<= 1;
+      bits++;
+    }
+    return bits;
+  }
+
+  int _widthFromVector(VectorWidth w) {
+    final msb = w.msb;
+    final lsb = w.lsb;
+    if (msb is LiteralExpression &&
+        lsb is LiteralExpression &&
+        msb.value is int &&
+        lsb.value is int) {
+      return ((msb.value as int) - (lsb.value as int)).abs() + 1;
+    }
+    return 1;
+  }
+
+  VectorWidth _constWidth(int width, SvToken start) => VectorWidth(
+        location: _loc(start),
+        msb: LiteralExpression(
+          location: _loc(start),
+          kind: LiteralKind.integer,
+          value: width - 1,
+        ),
+        lsb: LiteralExpression(
+          location: _loc(start),
+          kind: LiteralKind.integer,
+          value: 0,
+        ),
+      );
 
   List<IrNode> _parseSignalDeclaration() {
     final typeToken = _advance();

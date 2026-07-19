@@ -81,9 +81,7 @@ class ExpressionGenerator {
       return _generateUnaryOp(expr);
     }
     if (expr is ConditionalExpression) {
-      return 'mux(${generateLogic(expr.condition)}, '
-          '${generateLogic(expr.trueExpr)}, '
-          '${generateLogic(expr.falseExpr)})';
+      return generateConditional(expr);
     }
     if (expr is ConcatenationExpression) {
       final parts = expr.expressions.map(generateLogic).join(', ');
@@ -108,6 +106,17 @@ class ExpressionGenerator {
       code: 'GEN0001',
     );
     return 'Const(0)';
+  }
+
+  /// Generates a `mux(...)` for a ternary expression. When [widthContext] is
+  /// provided (e.g. the assignment target), constant branches are sized to
+  /// it so `a ? WIDE_CONST : 0` matches the target width rather than
+  /// defaulting each constant to a single bit.
+  String generateConditional(ConditionalExpression expr,
+      {String? widthContext}) {
+    return 'mux(${generateLogic(expr.condition)}, '
+        '${generateLogic(expr.trueExpr, widthContext: widthContext)}, '
+        '${generateLogic(expr.falseExpr, widthContext: widthContext)})';
   }
 
   /// Generates an expression that must be a ROHD `Logic` value; int-domain
