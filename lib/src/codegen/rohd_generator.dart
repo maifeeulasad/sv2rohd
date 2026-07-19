@@ -341,28 +341,143 @@ class RohdGenerator {
 
   void _generateAlways(AlwaysBlock block) {
     _writeLine();
-    if (block.kind == BlockKind.alwaysFf) {
-      var clock = block.clock != null
-          ? namingStrategy.toCamelCase(block.clock!)
-          : _clockHeuristic();
-      if (clock == null) {
-        _writeLine('// TODO: no clock found for sequential block');
-        clock = 'Logic()';
-      }
-      final clockExpr = block.negedgeClock ? '~$clock' : clock;
-      _writeLine('Sequential($clockExpr, [');
-    } else {
+
+    if (block.kind != BlockKind.alwaysFf) {
       if (block.kind == BlockKind.alwaysLatch) {
         _writeLine('// always_latch approximated with Combinational');
       }
       _writeLine('Combinational([');
+      _indent();
+      for (final line in _stmtGen.lines(block.body, asListItem: true)) {
+        _writeLine(line);
+      }
+      _dedent();
+      _writeLine(']);');
+      return;
     }
+
+    var clock = block.clock != null
+        ? namingStrategy.toCamelCase(block.clock!)
+        : _clockHeuristic();
+    if (clock == null) {
+      _writeLine('// TODO: no clock found for sequential block');
+      clock = 'Logic()';
+    }
+    final clockExpr = block.negedgeClock ? '~$clock' : clock;
+
+    if (block.asyncResetSignal != null) {
+      // ROHD's `Sequential` only re-evaluates on clock-edge glitches (see
+      // rohd/lib/src/modules/conditional.dart): its `reset`/`resetValues`
+      // parameters are pure syntax sugar for an `If(reset, ...)` wrapped
+      // around the clocked body, evaluated *at the clock edge* like
+      // everything else in the block. There is no primitive in this ROHD
+      // version for a trigger that fires independently of the clock, so a
+      // second edge-triggered signal in the sensitivity list (e.g.
+      // `negedge rst_n`) cannot be modeled as genuinely asynchronous no
+      // matter how it's generated here — only synchronous-equivalent
+      // behavior is possible. Always warn so this limitation is visible
+      // rather than silently downgrading the design's timing behavior.
+      diagnostics?.warning(
+        "always_ff clocked by '$clock' has a second edge-triggered signal "
+        "('${block.asyncResetSignal}') in its sensitivity list, which reads "
+        'as an asynchronous reset in SystemVerilog. The installed ROHD '
+        'version has no primitive for a non-clock trigger, so only '
+        'synchronous-equivalent reset behavior is generated (the reset is '
+        'only applied at clock edges). Verify this matches your timing '
+        'requirements.',
+        code: 'GEN0026',
+      );
+
+      final extracted = _extractAsyncReset(block);
+      if (extracted != null) {
+        final resetName = namingStrategy.toCamelCase(block.asyncResetSignal!);
+        final resetExpr = block.asyncResetActiveLow ? '~$resetName' : resetName;
+        _writeLine('Sequential($clockExpr, [');
+        _indent();
+        for (final stmt in extracted.body) {
+          for (final line in _stmtGen.lines(stmt, asListItem: true)) {
+            _writeLine(line);
+          }
+        }
+        _dedent();
+        if (extracted.resetValues.isEmpty) {
+          _writeLine('], reset: $resetExpr);');
+        } else {
+          _writeLine('], reset: $resetExpr, resetValues: {');
+          _indent();
+          for (final entry in extracted.resetValues.entries) {
+            _writeLine('${entry.key}: ${entry.value},');
+          }
+          _dedent();
+          _writeLine('});');
+        }
+        return;
+      }
+    }
+
+    _writeLine('Sequential($clockExpr, [');
     _indent();
     for (final line in _stmtGen.lines(block.body, asListItem: true)) {
       _writeLine(line);
     }
     _dedent();
     _writeLine(']);');
+  }
+
+  /// Attempts to recognize the canonical
+  /// `if (<reset active>) <literal resets> else <clocked body>` pattern and
+  /// extract it into ROHD's `reset`/`resetValues` constructor sugar (still
+  /// synchronous — see [_generateAlways] — but cleaner generated code than
+  /// the equivalent manual `If`). Returns null when the body doesn't match,
+  /// so the caller can fall back to plain synchronous-style generation.
+  ({List<IrStatement> body, Map<String, String> resetValues})?
+      _extractAsyncReset(AlwaysBlock block) {
+    final resetSignal = block.asyncResetSignal!;
+
+    var stmt = block.body;
+    if (stmt is SequentialBlock && stmt.statements.length == 1) {
+      stmt = stmt.statements.single;
+    }
+    if (stmt is! IfStatement) return null;
+
+    final conditionMatches = block.asyncResetActiveLow
+        ? _isNegatedIdentifier(stmt.condition, resetSignal)
+        : _isBareIdentifier(stmt.condition, resetSignal);
+    if (!conditionMatches) return null;
+
+    final resetValues = <String, String>{};
+    for (final s in _flattenStatements(stmt.thenBranch)) {
+      if (s is! AssignmentStatement ||
+          s.target is! IdentifierExpression ||
+          !_exprGen.isIntDomain(s.value)) {
+        return null;
+      }
+      resetValues[_exprGen.generate(s.target)] = _exprGen.generate(s.value);
+    }
+
+    final body = stmt.elseBranch != null
+        ? _flattenStatements(stmt.elseBranch!)
+        : const <IrStatement>[];
+    return (body: body, resetValues: resetValues);
+  }
+
+  bool _isNegatedIdentifier(IrExpression expr, String name) {
+    if (expr is! UnaryExpression) return false;
+    if (expr.operator != UnaryOperator.logicalNot &&
+        expr.operator != UnaryOperator.bitwiseNot) {
+      return false;
+    }
+    return _isBareIdentifier(expr.operand, name);
+  }
+
+  bool _isBareIdentifier(IrExpression expr, String name) =>
+      expr is IdentifierExpression && expr.identifier == name;
+
+  List<IrStatement> _flattenStatements(IrStatement stmt) {
+    if (stmt is SequentialBlock) {
+      return stmt.statements.expand(_flattenStatements).toList();
+    }
+    return [stmt];
   }
 
   void _generateContinuous(IrExpression target, IrExpression value) {

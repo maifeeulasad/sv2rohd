@@ -786,9 +786,8 @@ class SvParser {
     final start = _advance();
     final keyword = start.text;
 
-    String? clock;
-    var negedge = false;
-    var sawEdge = false;
+    // Every edge-triggered signal in the sensitivity list, in source order.
+    final edges = <(String signal, bool negedge)>[];
 
     if (_match('@')) {
       if (_match('*')) {
@@ -808,11 +807,7 @@ class SvParser {
             }
             final signal = _expectIdentifier('sensitivity signal');
             if (edge) {
-              sawEdge = true;
-              if (clock == null) {
-                clock = signal;
-                negedge = edgeNeg;
-              }
+              edges.add((signal, edgeNeg));
             }
             if (!_match('or') && !_match(',')) break;
           }
@@ -827,8 +822,39 @@ class SvParser {
       'always_ff' => BlockKind.alwaysFf,
       'always_comb' => BlockKind.alwaysComb,
       'always_latch' => BlockKind.alwaysLatch,
-      _ => sawEdge ? BlockKind.alwaysFf : BlockKind.alwaysComb,
+      _ => edges.isNotEmpty ? BlockKind.alwaysFf : BlockKind.alwaysComb,
     };
+
+    String? clock;
+    var negedge = false;
+    String? asyncResetSignal;
+    var asyncResetActiveLow = false;
+
+    if (edges.isNotEmpty) {
+      // A signal literally named clk/clock is preferred as "the" clock;
+      // otherwise the first edge in the list is assumed to be the clock,
+      // matching how designs conventionally order sensitivity lists.
+      final clockIndex = edges.indexWhere((e) {
+        final lower = e.$1.toLowerCase();
+        return lower == 'clk' || lower == 'clock';
+      });
+      final clockEdge = edges[clockIndex >= 0 ? clockIndex : 0];
+      clock = clockEdge.$1;
+      negedge = clockEdge.$2;
+
+      final resetEdges = edges.where((e) => e.$1 != clockEdge.$1).toList();
+      if (resetEdges.isNotEmpty) {
+        asyncResetSignal = resetEdges.first.$1;
+        asyncResetActiveLow = resetEdges.first.$2;
+        if (resetEdges.length > 1) {
+          _warn(
+            'always block has multiple potential async reset signals in its '
+            "sensitivity list; only '${asyncResetSignal}' is treated as an "
+            'async reset',
+          );
+        }
+      }
+    }
 
     return AlwaysBlock(
       location: _loc(start),
@@ -836,6 +862,8 @@ class SvParser {
       body: body,
       clock: clock,
       negedgeClock: negedge,
+      asyncResetSignal: asyncResetSignal,
+      asyncResetActiveLow: asyncResetActiveLow,
     );
   }
 

@@ -22,6 +22,7 @@ void main() {
       const _Fixture('alu', 'fixtures/sv_samples/alu.sv'),
       const _Fixture('multiplier', 'fixtures/sv_samples/multiplier.sv'),
       const _Fixture('hierarchy', 'fixtures/sv_samples/hierarchy.sv'),
+      const _Fixture('async_reset', 'fixtures/sv_samples/async_reset.sv'),
     ];
 
     for (final fixture in fixtures) {

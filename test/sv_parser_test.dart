@@ -101,6 +101,40 @@ endmodule
       expect(block.negedgeClock, isFalse);
     });
 
+    test('captures a second edge signal as an async reset trigger', () {
+      final module = parse('''
+module m(input logic clk, input logic rst_n, output logic q);
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) q <= 1'b0;
+    else q <= 1'b1;
+  end
+endmodule
+''').single;
+
+      final block = module.items.whereType<AlwaysBlock>().single;
+      expect(block.clock, 'clk');
+      expect(block.negedgeClock, isFalse);
+      expect(block.asyncResetSignal, 'rst_n');
+      expect(block.asyncResetActiveLow, isTrue);
+    });
+
+    test(
+        'picks the signal literally named clk as the clock regardless of '
+        'sensitivity-list order', () {
+      final module = parse('''
+module m(input logic clk, input logic rst_n, output logic q);
+  always_ff @(negedge rst_n or posedge clk) begin
+    if (!rst_n) q <= 1'b0;
+    else q <= 1'b1;
+  end
+endmodule
+''').single;
+
+      final block = module.items.whereType<AlwaysBlock>().single;
+      expect(block.clock, 'clk');
+      expect(block.asyncResetSignal, 'rst_n');
+    });
+
     test('classifies always @(posedge clk) as sequential', () {
       final module = parse('''
 module m(input logic clk, output logic q);
