@@ -147,6 +147,16 @@ Options:
     }
 
     String? outputPath = results['output'] as String?;
+    // When no -o is given but a config file explicitly sets a (non-default)
+    // output directory, write there instead of stdout. output_dir is always
+    // treated as a directory.
+    var outputIsDir = false;
+    if (outputPath == null &&
+        configPath != null &&
+        config.output.outputDir != const OutputConfig().outputDir) {
+      outputPath = config.output.outputDir;
+      outputIsDir = true;
+    }
     final includePaths = <IncludePath>[
       for (final path in (results['include'] as List<String>? ?? const []))
         IncludePath(path),
@@ -161,7 +171,8 @@ Options:
     // write output to a file inside that directory using the input basename.
     if (outputPath != null) {
       final outDir = Directory(outputPath);
-      if (outDir.existsSync() ||
+      if (outputIsDir ||
+          outDir.existsSync() ||
           outputPath.endsWith(p.separator) ||
           outputPath.endsWith('/')) {
         final base = p.basenameWithoutExtension(inputPath);
@@ -192,6 +203,10 @@ Options:
       exitCode = 1;
     } else if (converter.diagnostics.hasWarnings) {
       print('Conversion finished with ${converter.diagnosticSummary}');
+      if (config.analysis.warningsAsErrors) {
+        print('Treating warnings as errors (analysis.warnings_as_errors).');
+        exitCode = 1;
+      }
     }
   } catch (e) {
     print('Error: $e');
