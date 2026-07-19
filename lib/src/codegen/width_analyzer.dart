@@ -85,8 +85,11 @@ class WidthAnalyzer {
   /// are Dart ints at module construction time.
   final Set<String> intDomain = {};
 
-  /// SV names of unpacked-array signals (represented as `List<Logic>`).
+  /// SV names of unpacked-array signals (represented as nested `List<Logic>`).
   final Set<String> arraySignals = {};
+
+  /// Number of unpacked dimensions per array signal.
+  final Map<String, int> arrayDimensions = {};
 
   WidthAnalyzer({required this.namingStrategy});
 
@@ -153,12 +156,28 @@ class WidthAnalyzer {
       return widthOfVector(signalWidths[expr.identifier]);
     }
     if (expr is IndexedPartSelectExpression) {
-      final base = expr.base;
-      if (base is IdentifierExpression &&
-          arraySignals.contains(base.identifier)) {
-        // Indexing an unpacked array yields an element of the packed width.
-        return widthOfVector(signalWidths[base.identifier]);
+      // Unwind a chain of index selects (e.g. mem[a][b][c]) down to its
+      // base identifier, counting the indices applied.
+      var indexCount = 0;
+      IrExpression cursor = expr;
+      while (cursor is IndexedPartSelectExpression) {
+        indexCount++;
+        cursor = cursor.base;
       }
+      if (cursor is IdentifierExpression &&
+          arraySignals.contains(cursor.identifier)) {
+        final dims = arrayDimensions[cursor.identifier] ?? 1;
+        if (indexCount < dims) {
+          // Still an array/list, not a scalar hardware value.
+          return null;
+        }
+        final elementWidth = widthOfVector(signalWidths[cursor.identifier]);
+        // Any indices beyond the unpacked dims are bit-selects on the
+        // element Logic; each single-bit select yields width 1.
+        if (indexCount == dims) return elementWidth;
+        return LinearExpr.constant(1);
+      }
+      // Bit-select on an ordinary vector signal.
       return LinearExpr.constant(1);
     }
     if (expr is PartSelectExpression) {

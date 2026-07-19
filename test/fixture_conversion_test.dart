@@ -171,6 +171,30 @@ void main() {
       expect(converter.hasErrors, isFalse);
     });
 
+    test('matrix_regs emits nested lists for a 2D unpacked array', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/matrix_regs.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/matrix_regs.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      expect(output, contains('late final List<List<Logic>> cells;'));
+      // One List.generate per dimension, with a per-element flattened name.
+      expect(
+        output,
+        contains('cells = List.generate(rows, (i0) => '
+            'List.generate(cols, (i1) => '
+            "Logic(name: 'cells_\${i0}_\${i1}', width: width)));"),
+      );
+      // Two-level constant indexing in the generated logic.
+      expect(output, contains('cells[r][c] < d'));
+      expect(output, contains('q <= cells[0][0]'));
+      expect(converter.hasErrors, isFalse);
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');

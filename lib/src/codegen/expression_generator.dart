@@ -227,26 +227,45 @@ class ExpressionGenerator {
   }
 
   String _generateIndex(IndexedPartSelectExpression expr) {
-    final base = expr.base;
-    if (base is IdentifierExpression &&
-        arraySignals.contains(base.identifier)) {
-      final name = namingStrategy.toCamelCase(base.identifier);
-      if (!isIntDomain(expr.index)) {
-        // `name` is a Dart `List<Logic>`; its `[]` operator requires an
-        // `int`, so a runtime (non-elaboration-time) index here is
-        // guaranteed not to compile. Fail loudly instead of emitting code
-        // that silently looks like a successful conversion.
-        diagnostics?.error(
-          "array '${base.identifier}' is indexed with a runtime signal, "
-          'but unpacked-array elements can only be selected with a '
-          'compile-time constant (a parameter or genvar); dynamic array '
-          'indexing is not supported',
-          code: 'GEN0025',
-        );
-      }
-      return '$name[${generateInt(expr.index)}]';
+    // Unwind a chain of index selects (mem[a][b]) down to the base.
+    final indices = <IrExpression>[];
+    IrExpression cursor = expr;
+    while (cursor is IndexedPartSelectExpression) {
+      indices.add(cursor.index);
+      cursor = cursor.base;
     }
-    final baseStr = _postfixOperand(generate(base));
+    final ordered = indices.reversed.toList();
+
+    if (cursor is IdentifierExpression &&
+        arraySignals.contains(cursor.identifier)) {
+      final name = namingStrategy.toCamelCase(cursor.identifier);
+      final dims = widthAnalyzer?.arrayDimensions[cursor.identifier] ?? 1;
+      final sb = StringBuffer(name);
+      for (var i = 0; i < ordered.length; i++) {
+        final idx = ordered[i];
+        if (i < dims) {
+          // Indexing into a Dart `List`; its `[]` requires an `int`, so a
+          // runtime (non-elaboration-time) index cannot compile. Fail
+          // loudly instead of emitting code that looks like success.
+          if (!isIntDomain(idx)) {
+            diagnostics?.error(
+              "array '${cursor.identifier}' is indexed with a runtime "
+              'signal, but unpacked-array elements can only be selected '
+              'with a compile-time constant (a parameter or genvar); '
+              'dynamic array indexing is not supported',
+              code: 'GEN0025',
+            );
+          }
+          sb.write('[${generateInt(idx)}]');
+        } else {
+          // Bit/part select on the element Logic; a hardware index is fine.
+          sb.write('[${isIntDomain(idx) ? generateInt(idx) : generate(idx)}]');
+        }
+      }
+      return sb.toString();
+    }
+
+    final baseStr = _postfixOperand(generate(expr.base));
     final indexStr = isIntDomain(expr.index)
         ? generateInt(expr.index)
         : generate(expr.index);

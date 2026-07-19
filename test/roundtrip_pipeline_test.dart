@@ -25,6 +25,7 @@ void main() {
       const _Fixture('async_reset', 'fixtures/sv_samples/async_reset.sv'),
       const _Fixture('casez_wildcard', 'fixtures/sv_samples/casez_wildcard.sv'),
       const _Fixture('keyword_names', 'fixtures/sv_samples/keyword_names.sv'),
+      const _Fixture('matrix_regs', 'fixtures/sv_samples/matrix_regs.sv'),
     ];
 
     for (final fixture in fixtures) {

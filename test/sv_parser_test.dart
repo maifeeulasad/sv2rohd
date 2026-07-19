@@ -74,6 +74,17 @@ endmodule
       expect(signals[3].unpackedDims, hasLength(1));
     });
 
+    test('parses multi-dimensional unpacked arrays', () {
+      final module = parse('''
+module m;
+  logic [7:0] cells [0:3][0:1];
+endmodule
+''').single;
+
+      final signal = module.items.whereType<SignalDeclaration>().single;
+      expect(signal.unpackedDims, hasLength(2));
+    });
+
     test('parses localparam as a local parameter', () {
       final module = parse('''
 module m;

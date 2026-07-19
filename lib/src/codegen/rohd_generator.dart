@@ -96,8 +96,8 @@ class RohdGenerator {
     for (final signal in topSignals) {
       final name = namingStrategy.toCamelCase(signal.name);
       if (portNames.contains(name)) continue;
-      final type = signal.unpackedDims.isNotEmpty ? 'List<Logic>' : 'Logic';
-      _writeLine('late final $type $name;');
+      _writeLine('late final ${_arrayFieldType(signal.unpackedDims.length)} '
+          '$name;');
     }
 
     _writeLine();
@@ -138,6 +138,7 @@ class RohdGenerator {
         _wa.signalWidths[item.name] = item.width;
         if (item.unpackedDims.isNotEmpty) {
           _wa.arraySignals.add(item.name);
+          _wa.arrayDimensions[item.name] = item.unpackedDims.length;
         }
       } else if (item is GenvarDeclaration) {
         _wa.intDomain.add(namingStrategy.toCamelCase(item.name));
@@ -258,16 +259,8 @@ class RohdGenerator {
     final prefix = asLocal ? 'final ' : '';
 
     if (signal.unpackedDims.isNotEmpty) {
-      if (signal.unpackedDims.length > 1) {
-        diagnostics?.warning(
-          "signal '${signal.name}' has multiple unpacked dimensions; only "
-          'the first is used',
-          code: 'GEN0020',
-        );
-      }
-      final count = _dimensionCount(signal.unpackedDims.first);
-      _writeLine('$prefix$name = List.generate($count, '
-          "(i) => Logic(name: '${signal.name}_\$i', width: $width));");
+      _writeLine('$prefix$name = '
+          '${_nestedListGenerate(signal, width, 0, const [])};');
       return;
     }
 
@@ -730,6 +723,33 @@ class RohdGenerator {
       return oriented.render();
     }
     return '1';
+  }
+
+  /// Dart field type for a signal with [dimCount] unpacked dimensions:
+  /// `Logic`, `List<Logic>`, `List<List<Logic>>`, ...
+  String _arrayFieldType(int dimCount) =>
+      '${'List<' * dimCount}Logic${'>' * dimCount}';
+
+  /// Builds a (possibly nested) `List.generate(...)` expression that
+  /// allocates every element of an unpacked array, one `List.generate` per
+  /// dimension, with each leaf `Logic` named `sig_<i0>_<i1>_...`.
+  String _nestedListGenerate(
+    SignalDeclaration signal,
+    String width,
+    int level,
+    List<String> indexVars,
+  ) {
+    if (level == signal.unpackedDims.length) {
+      final nameExpr = indexVars.isEmpty
+          ? "'${signal.name}'"
+          : "'${signal.name}_${indexVars.map((v) => '\${$v}').join('_')}'";
+      return 'Logic(name: $nameExpr, width: $width)';
+    }
+    final count = _dimensionCount(signal.unpackedDims[level]);
+    final idx = 'i$level';
+    final inner =
+        _nestedListGenerate(signal, width, level + 1, [...indexVars, idx]);
+    return 'List.generate($count, ($idx) => $inner)';
   }
 
   // ── Output helpers ───────────────────────────────────────────────
