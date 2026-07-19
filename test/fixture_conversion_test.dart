@@ -147,6 +147,30 @@ void main() {
       expect(output, contains('Const(1, width: bits.width)'));
     });
 
+    test('keyword_names escapes Dart-reserved identifiers but keeps SV names',
+        () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/keyword_names.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/keyword_names.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      // Dart identifiers are escaped...
+      expect(output, contains('late final Logic in_;'));
+      expect(output, contains('late final Logic is_;'));
+      expect(output, contains('late final Logic switch_;'));
+      expect(
+          output, contains('KeywordNames(Logic in_Source, Logic is_Source)'));
+      // ...but the ROHD-level SV port/signal names are preserved verbatim.
+      expect(output, contains("addInput('in', in_Source"));
+      expect(output, contains("addInput('is', is_Source"));
+      expect(output, contains("Logic(name: 'switch'"));
+      expect(converter.hasErrors, isFalse);
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');
