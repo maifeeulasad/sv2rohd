@@ -159,6 +159,10 @@ class RohdGenerator {
         if (item.elseBranch != null) {
           _collectContext(item.elseBranch!.items);
         }
+      } else if (item is CaseGenerateBlock) {
+        for (final caseItem in item.items) {
+          _collectContext(caseItem.body.items);
+        }
       }
     }
   }
@@ -308,6 +312,10 @@ class RohdGenerator {
       }
       if (item is IfGenerateBlock) {
         _generateIfGenerate(item);
+        continue;
+      }
+      if (item is CaseGenerateBlock) {
+        _generateCaseGenerate(item);
         continue;
       }
       if (item is GenerateBlock) {
@@ -543,6 +551,45 @@ class RohdGenerator {
       _dedent();
     }
     _writeLine('}');
+  }
+
+  /// A case-generate selects a branch at elaboration time from the constant
+  /// value of [CaseGenerateBlock.expression], so it lowers to a Dart
+  /// if / else-if chain over the parameter value (default branch, marked by
+  /// an item with empty `values`, becomes the trailing `else`).
+  void _generateCaseGenerate(CaseGenerateBlock block) {
+    final selector = _exprGen.generateInt(block.expression);
+    GenerateCaseItem? defaultItem;
+    var first = true;
+
+    _writeLine();
+    for (final item in block.items) {
+      if (item.values.isEmpty) {
+        defaultItem = item;
+        continue;
+      }
+      final condition = item.values
+          .map((v) => '$selector == ${_exprGen.generateInt(v)}')
+          .join(' || ');
+      _writeLine('${first ? '' : '} else '}if ($condition) {');
+      _indent();
+      _generateItems(item.body.items, topLevel: false);
+      _dedent();
+      first = false;
+    }
+
+    if (defaultItem != null) {
+      if (first) {
+        // Only a default branch: emit it unconditionally.
+        _generateItems(defaultItem.body.items, topLevel: false);
+        return;
+      }
+      _writeLine('} else {');
+      _indent();
+      _generateItems(defaultItem.body.items, topLevel: false);
+      _dedent();
+    }
+    if (!first) _writeLine('}');
   }
 
   void _generateInstantiation(ModuleInstantiation inst) {

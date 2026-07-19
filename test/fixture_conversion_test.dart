@@ -195,6 +195,27 @@ void main() {
       expect(converter.hasErrors, isFalse);
     });
 
+    test('case_generate lowers to an if/else chain over the parameter', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/case_generate.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/case_generate.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      expect(output, contains('if (mode == 0) {'));
+      expect(output, contains('} else if (mode == 1) {'));
+      // A multi-value item becomes an OR of equality checks.
+      expect(output, contains('} else if (mode == 2 || mode == 3) {'));
+      // The default branch becomes the trailing else.
+      expect(output, contains('} else {'));
+      expect(output, contains('y <= (a + b)'));
+      expect(output, contains('y <= a;'));
+      expect(converter.hasErrors, isFalse);
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');

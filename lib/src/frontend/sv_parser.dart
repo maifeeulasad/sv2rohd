@@ -955,6 +955,9 @@ class SvParser {
     if (_check('if')) {
       return [_parseIfGenerate()];
     }
+    if (_check('case')) {
+      return [_parseCaseGenerate()];
+    }
     if (_check('begin')) {
       return [_parseGenerateBlock()];
     }
@@ -1083,6 +1086,42 @@ class SvParser {
       condition: condition,
       thenBranch: thenBranch,
       elseBranch: elseBranch,
+    );
+  }
+
+  IrNode _parseCaseGenerate() {
+    final start = _expect('case');
+    _expect('(');
+    final expression = _parseExpression();
+    _expect(')');
+
+    final items = <GenerateCaseItem>[];
+    while (!_check('endcase') && !_current.isEof) {
+      final itemStart = _current;
+      final values = <IrExpression>[];
+      if (_match('default')) {
+        _match(':');
+        // An empty `values` list marks the default branch.
+      } else {
+        values.add(_parseExpression());
+        while (_match(',')) {
+          values.add(_parseExpression());
+        }
+        _expect(':');
+      }
+      final body = _parseGenerateBlock();
+      items.add(GenerateCaseItem(
+        location: _loc(itemStart),
+        values: values,
+        body: body,
+      ));
+    }
+    _expect('endcase');
+
+    return CaseGenerateBlock(
+      location: _loc(start),
+      expression: expression,
+      items: items,
     );
   }
 
