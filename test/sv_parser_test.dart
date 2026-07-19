@@ -94,6 +94,41 @@ endmodule
       expect(module.parameters.single.name, 'IDLE');
       expect(module.parameters.single.isLocal, isTrue);
     });
+
+    test('parses a typedef enum into member constants and typed signals', () {
+      final module = parse('''
+module m;
+  typedef enum logic [1:0] { IDLE, RUN, DONE } state_t;
+  state_t state, next_state;
+endmodule
+''').single;
+
+      // Members become local parameters with incrementing values.
+      final members = module.items.whereType<ParameterDeclaration>().toList();
+      expect(members.map((m) => m.name), ['IDLE', 'RUN', 'DONE']);
+      expect(members.every((m) => m.isLocal), isTrue);
+      expect((members[2].defaultValue as LiteralExpression).value, 2);
+
+      // Signals of the enum type become 2-bit logic (from `logic [1:0]`).
+      final signals = module.items.whereType<SignalDeclaration>().toList();
+      expect(signals.map((s) => s.name), ['state', 'next_state']);
+      expect((signals[0].width!.msb as LiteralExpression).value, 1);
+      expect((signals[0].width!.lsb as LiteralExpression).value, 0);
+    });
+
+    test('assigns explicit and inferred enum values correctly', () {
+      final module = parse('''
+module m;
+  typedef enum { A, B = 5, C } e_t;
+endmodule
+''').single;
+
+      final members = module.items.whereType<ParameterDeclaration>().toList();
+      expect((members[0].defaultValue as LiteralExpression).value, 0);
+      expect((members[1].defaultValue as LiteralExpression).value, 5);
+      // C continues numbering from B.
+      expect((members[2].defaultValue as LiteralExpression).value, 6);
+    });
   });
 
   group('SvParser always blocks', () {

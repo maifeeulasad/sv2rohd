@@ -206,9 +206,13 @@ class RohdGenerator {
       }
     }
 
+    // Local parameters come from `localparam` declarations and from enum
+    // members (emitted by the parser as local ParameterDeclaration items).
     final localParams = [
       for (final param in module.parameters)
         if (param.isLocal) param,
+      for (final item in module.items)
+        if (item is ParameterDeclaration && item.isLocal) item,
     ];
     if (localParams.isNotEmpty) {
       _writeLine();

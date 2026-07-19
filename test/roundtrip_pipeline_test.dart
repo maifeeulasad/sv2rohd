@@ -27,6 +27,7 @@ void main() {
       const _Fixture('keyword_names', 'fixtures/sv_samples/keyword_names.sv'),
       const _Fixture('matrix_regs', 'fixtures/sv_samples/matrix_regs.sv'),
       const _Fixture('case_generate', 'fixtures/sv_samples/case_generate.sv'),
+      const _Fixture('fsm', 'fixtures/sv_samples/fsm.sv'),
     ];
 
     for (final fixture in fixtures) {

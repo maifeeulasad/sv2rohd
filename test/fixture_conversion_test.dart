@@ -216,6 +216,37 @@ void main() {
       expect(converter.hasErrors, isFalse);
     });
 
+    test('fsm converts a typedef-enum state machine', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/fsm.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/fsm.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      // Enum members become local int constants...
+      expect(output, contains('final idle = 0;'));
+      expect(output, contains('final run = 1;'));
+      expect(output, contains('final done = 2;'));
+      // ...and the enum-typed signals become 2-bit logic.
+      expect(output, contains("state = Logic(name: 'state', width: 2)"));
+      expect(
+          output, contains("nextState = Logic(name: 'next_state', width: 2)"));
+      // Case items and comparisons reference the member constants.
+      expect(output, contains('Case(state, ['));
+      expect(output, contains('CaseItem(Const(idle, width: state.width)'));
+      expect(output, contains('active <= state.eq(run)'));
+      // The ternary branches are sized to the assignment target.
+      expect(
+        output,
+        contains('mux(go, Const(run, width: nextState.width), '
+            'Const(idle, width: nextState.width))'),
+      );
+      expect(converter.hasErrors, isFalse);
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');
