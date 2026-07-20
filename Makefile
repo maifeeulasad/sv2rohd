@@ -34,11 +34,11 @@ upgrade-deps: ## Upgrade all dependencies
 	@$(DART) pub upgrade
 	@echo "✓ Dependencies upgraded"
 
-download-rohd:
-	@echo "Downloading ROHD package..."
-	@git clone https://github.com/maifeeulasad/rohd.git
-	@git clone https://github.com/intel/rohd-cosim.git
-	@echo "✓ ROHD package downloaded"
+download-rohd: ## Clone the local ROHD checkout as a sibling directory (../rohd)
+	@echo "Downloading ROHD package to ../rohd (used via dependency_overrides)..."
+	@cd .. && git clone https://github.com/maifeeulasad/rohd.git
+	@cd .. && git clone https://github.com/intel/rohd-cosim.git
+	@echo "✓ ROHD package downloaded to ../rohd"
 
 ##@ Building
 build: ## Build the project (pub get)
