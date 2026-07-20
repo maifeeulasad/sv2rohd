@@ -110,10 +110,20 @@ dart run sv2rohd -i design.sv -o lib/generated/design.dart
 # With a YAML configuration file
 dart run sv2rohd -c sv2rohd.yaml -i design.sv -o out/
 
+# Also emit a runnable ROHD testbench scaffold (design_test.dart)
+dart run sv2rohd -i design.sv -o out/design.dart -t
+
 # Other flags
 dart run sv2rohd --help
 dart run sv2rohd --version
 ```
+
+With `-t`/`--testbench` (or `codegen.generate_tests: true` in the config),
+sv2rohd also writes a runnable ROHD testbench scaffold next to the output. It
+instantiates the module, sets up a clock and reset (when present), dumps a VCD
+waveform via `WaveDumper`, and leaves TODO markers for the stimulus and output
+checks — a working starting point you fill in, since SystemVerilog has no
+"generate a testbench" input.
 
 Files containing multiple modules are emitted as a single Dart file so module
 instantiations resolve each other; named port connections are mapped onto the
