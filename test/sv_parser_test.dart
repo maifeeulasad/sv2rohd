@@ -129,6 +129,24 @@ endmodule
       // C continues numbering from B.
       expect((members[2].defaultValue as LiteralExpression).value, 6);
     });
+
+    test('parses a function with a return type, params, and body', () {
+      final module = parse('''
+module m;
+  function automatic logic [7:0] add(logic [7:0] x, logic [7:0] y);
+    return x + y;
+  endfunction
+endmodule
+''').single;
+
+      final fn = module.items.whereType<FunctionDeclaration>().single;
+      expect(fn.name, 'add');
+      expect(fn.returnWidth, isNotNull);
+      expect((fn.returnWidth!.msb as LiteralExpression).value, 7);
+      expect(fn.ports.map((p) => p.name), ['x', 'y']);
+      expect(fn.ports.every((p) => p.direction == PortDirection.input), isTrue);
+      expect(fn.body.single, isA<ReturnStatement>());
+    });
   });
 
   group('SvParser always blocks', () {

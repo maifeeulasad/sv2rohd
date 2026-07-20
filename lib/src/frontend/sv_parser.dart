@@ -680,9 +680,13 @@ class SvParser {
       return _parseGenerateItem();
     }
 
-    if (t == 'function' || t == 'task') {
-      _skipToMatching(t, t == 'function' ? 'endfunction' : 'endtask');
-      _warn('function/task declarations are not converted');
+    if (t == 'function') {
+      return _parseFunction();
+    }
+
+    if (t == 'task') {
+      _skipToMatching('task', 'endtask');
+      _warn('task declarations are not supported; skipped');
       return const [];
     }
 
@@ -906,6 +910,139 @@ class SvParser {
           value: 0,
         ),
       );
+
+  /// Parses a `function [automatic] [return_type] name (ports); body
+  /// endfunction`. The function is captured as a [FunctionDeclaration] whose
+  /// body is inlined at call sites during code generation (see
+  /// `FunctionInliner`); tasks are not supported.
+  List<IrNode> _parseFunction() {
+    final start = _expect('function');
+    _match('automatic');
+    _match('static');
+    _match('void');
+
+    // Consume return-type tokens (keywords, signedness, a type name) until
+    // the function name — the identifier immediately followed by `(` or `;`.
+    // A packed dimension seen along the way is the return width.
+    VectorWidth? returnWidth;
+    while (!(_current.type == SvTokenType.identifier &&
+        (_peek().text == '(' || _peek().text == ';'))) {
+      if (_current.isEof || _check('endfunction')) break;
+      if (_check('[')) {
+        returnWidth = _parseVectorWidth();
+        continue;
+      }
+      _advance();
+    }
+    final name = _expectIdentifier('function name');
+
+    final params = <FunctionPort>[];
+    if (_match('(')) {
+      params.addAll(_parseFunctionPortList());
+      _expect(')');
+    }
+    _expect(';');
+
+    final body = <IrStatement>[];
+    while (!_check('endfunction') && !_current.isEof) {
+      final t = _current.text;
+      if (t == 'input' || t == 'output' || t == 'inout') {
+        // Non-ANSI parameter declarations inside the body.
+        params.addAll(_parseFunctionBodyPorts());
+      } else if (_varTypes.contains(t) ||
+          _netTypes.contains(t) ||
+          _intTypes.contains(t)) {
+        // Local variable declaration; consumed and discarded (locals are
+        // resolved by forward substitution during inlining).
+        _parseSignalDeclaration();
+      } else {
+        body.add(_parseStatement());
+      }
+    }
+    _expect('endfunction');
+    if (_match(':')) {
+      _expectIdentifier('function label');
+    }
+
+    return [
+      FunctionDeclaration(
+        location: _loc(start),
+        name: name,
+        ports: params,
+        returnWidth: returnWidth,
+        body: body,
+      ),
+    ];
+  }
+
+  List<FunctionPort> _parseFunctionPortList() {
+    final params = <FunctionPort>[];
+    var direction = PortDirection.input;
+    VectorWidth? width;
+    while (!_check(')') && !_current.isEof) {
+      if (_match('input')) {
+        direction = PortDirection.input;
+        width = null;
+      } else if (_match('output')) {
+        direction = PortDirection.output;
+        width = null;
+      } else if (_match('inout')) {
+        direction = PortDirection.inout;
+        width = null;
+      }
+      while (_varTypes.contains(_current.text) ||
+          _intTypes.contains(_current.text) ||
+          _check('signed') ||
+          _check('unsigned')) {
+        _advance();
+      }
+      if (_check('[')) {
+        width = _parseVectorWidth();
+      }
+      final start = _current;
+      final name = _expectIdentifier('parameter name');
+      params.add(FunctionPort(
+        location: _loc(start),
+        name: name,
+        direction: direction,
+        width: width,
+      ));
+      if (!_match(',')) break;
+    }
+    return params;
+  }
+
+  List<FunctionPort> _parseFunctionBodyPorts() {
+    final direction = switch (_advance().text) {
+      'output' => PortDirection.output,
+      'inout' => PortDirection.inout,
+      _ => PortDirection.input,
+    };
+    while (_varTypes.contains(_current.text) ||
+        _intTypes.contains(_current.text) ||
+        _check('signed') ||
+        _check('unsigned')) {
+      _advance();
+    }
+    VectorWidth? width;
+    if (_check('[')) {
+      width = _parseVectorWidth();
+    }
+    final params = <FunctionPort>[];
+    while (true) {
+      final start = _current;
+      final name = _expectIdentifier('parameter name');
+      params.add(FunctionPort(
+        location: _loc(start),
+        name: name,
+        direction: direction,
+        width: width,
+      ));
+      if (!_match(',')) break;
+    }
+    _expect(';');
+    return params;
+  }
 
   List<IrNode> _parseSignalDeclaration() {
     final typeToken = _advance();
@@ -1362,6 +1499,16 @@ class SvParser {
         label: label,
         statements: statements,
       );
+    }
+
+    if (_check('return')) {
+      _advance();
+      IrExpression? value;
+      if (!_check(';')) {
+        value = _parseExpression();
+      }
+      _expect(';');
+      return ReturnStatement(location: _loc(start), value: value);
     }
 
     if (_check('unique') || _check('priority')) {

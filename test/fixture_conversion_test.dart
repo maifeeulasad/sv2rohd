@@ -247,6 +247,29 @@ void main() {
       expect(converter.hasErrors, isFalse);
     });
 
+    test('functions are inlined at their call sites', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/functions.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/functions.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      // No residual function-call syntax survives inlining.
+      expect(output, isNot(contains('add_sat(')));
+      expect(output, isNot(contains('max2(')));
+      expect(output, isNot(contains('blend(')));
+      expect(output, isNot(contains('parity(')));
+      // if/else function -> ternary; reduction -> .xor(); nested -> inlined.
+      expect(output, contains('maxVal <= (mux(a.gt(b), a, b));'));
+      expect(output, contains('par <= a.xor();'));
+      expect(output,
+          contains('mux(sel, (mux((a + b).gt(a), (a + b), a)), (a + b))'));
+      expect(converter.hasErrors, isFalse);
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');

@@ -5,6 +5,7 @@
 // implementation were generated with LLM assistance.
 
 import '../ir/ir.dart';
+import 'function_inliner.dart';
 import 'naming_strategy.dart';
 
 /// A linear combination of parameter names with integer coefficients plus a
@@ -90,6 +91,9 @@ class WidthAnalyzer {
 
   /// Number of unpacked dimensions per array signal.
   final Map<String, int> arrayDimensions = {};
+
+  /// Inliner used to resolve the width of user function calls; may be null.
+  FunctionInliner? functionInliner;
 
   WidthAnalyzer({required this.namingStrategy});
 
@@ -255,6 +259,17 @@ class WidthAnalyzer {
       if (f == null) return t;
       final diff = t - f;
       if (diff.isConstant) return diff.constant >= 0 ? t : f;
+      return null;
+    }
+    if (expr is FunctionCallExpression) {
+      final inliner = functionInliner;
+      if (inliner != null && inliner.isFunction(expr.functionName)) {
+        final declared = inliner.returnWidthOf(expr.functionName);
+        if (declared != null) return widthOfVector(declared);
+        // Fall back to the width of the inlined body.
+        final inlined = inliner.inline(expr.functionName, expr.arguments);
+        if (inlined != null) return widthOfExpr(inlined);
+      }
       return null;
     }
     return null;

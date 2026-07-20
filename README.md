@@ -126,7 +126,10 @@ generated constructors and instance outputs are wired back with `<=`.
 | `module` with parameters and ANSI ports | `Module` subclass; parameters become named `int` constructor arguments |
 | Parameterized widths (`[WIDTH-1:0]`, `[2*W-1:0]`) | Dart integer width expressions |
 | `logic`/`wire`/`reg`/`bit` declarations | `Logic(...)` signals |
-| Unpacked arrays (`logic [7:0] m [0:N-1]`) | `List<Logic>` via `List.generate` |
+| Unpacked arrays, incl. multi-dim (`logic [7:0] m [0:A][0:B]`) | nested `List<Logic>` via `List.generate` |
+| `typedef enum`/inline `enum` (FSM states) | member `int` constants + width-typed `Logic` signals |
+| `generate` with `case` | elaborated Dart `if`/`else` chain over the parameter |
+| `function` (combinational) | inlined at call sites (body reduced to an expression) |
 | `always_ff @(posedge clk)` | `Sequential(clk, [...])` (one per block) |
 | `always_comb`, `always @*` | `Combinational([...])` |
 | `assign` | continuous assignment via `<=` |
@@ -147,9 +150,16 @@ target is wider, operands are zero-extended (preserving carries); when
 narrower, the value is truncated with `getRange` — mirroring SystemVerilog
 context-determined width semantics.
 
-Not supported (skipped with diagnostics): interfaces, classes, functions/tasks,
-`initial` blocks (use ROHD `Simulator` for testbenches), dynamic part selects,
-and x/z four-state literals (converted to 0 with a warning).
+Combinational `function`s are inlined at their call sites: the body is reduced
+to a single value expression (straight-line assignments, `if`/`else` and `case`
+become nested ternaries, `return`), and the call arguments are substituted for
+the parameters. A function body that can't be reduced (e.g. contains a loop)
+produces a diagnostic instead of silently wrong output.
+
+Not supported (skipped with diagnostics): interfaces, classes, tasks, functions
+with loops, `initial` blocks (use ROHD `Simulator` for testbenches), dynamic
+part selects, and x/z four-state literals outside casez/casex (converted to 0
+with a warning).
 
 ## How it works
 

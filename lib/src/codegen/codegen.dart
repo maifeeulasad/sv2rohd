@@ -11,3 +11,4 @@ export 'statement_generator.dart';
 export 'testbench_generator.dart';
 export 'naming_strategy.dart';
 export 'width_analyzer.dart';
+export 'function_inliner.dart';

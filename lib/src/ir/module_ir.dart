@@ -414,17 +414,25 @@ class FunctionDeclaration extends IrNode {
   final List<FunctionPort> ports;
   final List<IrNode> items;
 
+  /// Return-value bit width (e.g. `logic [7:0] f(...)`); null for scalar/void.
+  final VectorWidth? returnWidth;
+
+  /// The function body statements, used to inline the function at call sites.
+  final List<IrStatement> body;
+
   FunctionDeclaration({
     required super.location,
     required this.name,
     this.returnType,
     this.ports = const [],
     this.items = const [],
+    this.returnWidth,
+    this.body = const [],
   });
 
   @override
   List<IrNode> get children =>
-      [if (returnType != null) returnType!, ...ports, ...items];
+      [if (returnType != null) returnType!, ...ports, ...items, ...body];
 
   @override
   String get nodeType => 'FunctionDeclaration';
@@ -439,11 +447,15 @@ class FunctionPort extends IrNode {
   final PortDirection direction;
   final IrType? type;
 
+  /// Declared bit width of the parameter, if any.
+  final VectorWidth? width;
+
   FunctionPort({
     required super.location,
     required this.name,
     required this.direction,
     this.type,
+    this.width,
   });
 
   @override
