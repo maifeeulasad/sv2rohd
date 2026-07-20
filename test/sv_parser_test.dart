@@ -130,6 +130,30 @@ endmodule
       expect((members[2].defaultValue as LiteralExpression).value, 6);
     });
 
+    test('captures the signed qualifier on ports and signals', () {
+      final module = parse('''
+module m(
+  input  logic signed [7:0] a,
+  input  logic        [7:0] b,
+  output logic signed       y
+);
+  logic signed [3:0] tmp;
+  logic        [3:0] plain;
+endmodule
+''').single;
+
+      final ports = {for (final p in module.ports) p.name: p};
+      expect(ports['a']!.isSigned, isTrue);
+      expect(ports['b']!.isSigned, isFalse);
+      expect(ports['y']!.isSigned, isTrue);
+
+      final signals = {
+        for (final s in module.items.whereType<SignalDeclaration>()) s.name: s
+      };
+      expect(signals['tmp']!.isSigned, isTrue);
+      expect(signals['plain']!.isSigned, isFalse);
+    });
+
     test('parses a function with a return type, params, and body', () {
       final module = parse('''
 module m;

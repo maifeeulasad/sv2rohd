@@ -270,6 +270,26 @@ void main() {
       expect(converter.hasErrors, isFalse);
     });
 
+    test('signed comparisons use the two-complement mux identity', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/signed_cmp.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/signed_cmp.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      // a < b (signed) -> mux on the sign bits, else unsigned lt.
+      expect(output, contains('aLtB <= mux(a[-1].neq(b[-1]), a[-1], a.lt(b))'));
+      // a >= b (signed) -> ~(a < b signed).
+      expect(
+          output, contains('aGeB <= ~mux(a[-1].neq(b[-1]), a[-1], a.lt(b))'));
+      // a > 0 (signed): the literal is sized to a's 8-bit width.
+      expect(output, contains('Const(0, width: 8)'));
+      expect(converter.hasErrors, isFalse);
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');

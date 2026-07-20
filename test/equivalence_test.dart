@@ -35,6 +35,7 @@ void main() {
       'keyword_names',
       'matrix_regs',
       'multiplier',
+      'signed_cmp',
     ];
 
     tearDownAll(() {
