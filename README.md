@@ -180,11 +180,19 @@ SystemVerilog ──▶ Preprocessor ──▶ SvScanner ──▶ SvParser ─�
   `WidthAnalyzer` that turns parameterized widths into Dart expressions and
   decides when zero-extension/truncation is needed.
 
-## Development
+sv2rohd builds against the **local ROHD checkout** (the latest, and the
+direction ROHD is heading), wired via `dependency_overrides` in `pubspec.yaml`.
+Clone it as a sibling directory before running anything:
+
+```bash
+make download-rohd   # git clone ... ../rohd
+make setup           # dart pub get
+```
 
 ```bash
 make test        # run all tests
 make roundtrip   # SV -> ROHD -> build -> SV roundtrip tests
+make equiv       # SV<->ROHD functional equivalence (installs Icarus Verilog)
 make lint        # dart analyze --fatal-infos
 make format      # dart format
 make ci          # format check + analyze + test
@@ -192,9 +200,28 @@ make run-fixtures  # convert all fixture designs into ./output
 ```
 
 The roundtrip tests convert each fixture to ROHD, compile and run the result
-against the real ROHD package, regenerate SystemVerilog with
-`generateSynth()`, and check the output for the expected ports and
-`always_ff`/`always_comb`/`case` structure.
+against ROHD, regenerate SystemVerilog with `generateSynth()`, and check the
+output for the expected ports and `always_ff`/`always_comb`/`case` structure.
+
+### Functional equivalence checking
+
+`make equiv` proves that the original SystemVerilog and the ROHD sv2rohd
+generates from it compute **the same outputs**, not just that both build:
+
+1. `original.sv` → sv2rohd → ROHD Dart → `generateSynth()` → `rohd_generated.sv`.
+2. A generated **miter** testbench instantiates *both* the original module and
+   the ROHD-generated one, drives them with identical randomized stimulus
+   (clock + reset + data, derived from the module's ports), and compares every
+   output each cycle — dumping a VCD waveform for inspection on any mismatch.
+3. Both designs are simulated together under [Icarus Verilog](https://steveicarus.github.io/iverilog/);
+   any divergence fails the check.
+
+`tool/setup_iverilog.sh` vendors Icarus Verilog into `.dart_tool/iverilog`
+without root (it extracts the `.deb`); alternatively set `IVERILOG_ROOT` to an
+existing install. When neither is present the equivalence tests skip cleanly.
+All bundled fixtures pass equivalence across parameterized widths, generate
+blocks, enums/FSMs, inlined functions, `casez` wildcards, multi-dimensional
+arrays, and module hierarchy.
 
 ## License
 

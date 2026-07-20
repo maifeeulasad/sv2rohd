@@ -25,7 +25,7 @@ module fsm (
 
   always_comb begin
     case (state)
-      IDLE: next_state = go ? RUN : IDLE;
+      IDLE: next_state = state_t'(go ? RUN : IDLE);
       RUN:  next_state = DONE;
       DONE: next_state = IDLE;
       default: next_state = IDLE;

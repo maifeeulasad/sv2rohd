@@ -84,6 +84,12 @@ roundtrip: ## Run SV->ROHD->SV roundtrip tests
 	@$(DART) test test/roundtrip_pipeline_test.dart
 	@echo "✓ Roundtrip pipeline tests completed"
 
+equiv: ## Verify SV<->ROHD functional equivalence (needs Icarus Verilog)
+	@bash tool/setup_iverilog.sh
+	@echo "Running SV<->ROHD equivalence tests..."
+	@$(DART) test test/equivalence_test.dart
+	@echo "✓ Equivalence tests completed"
+
 test-watch: ## Run tests in watch mode
 	@echo "Running tests in watch mode..."
 	@$(DART) test --watch
