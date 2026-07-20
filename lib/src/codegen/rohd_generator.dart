@@ -117,6 +117,7 @@ class RohdGenerator {
     _collectContext(module.items);
     for (final port in module.ports) {
       _wa.signalWidths[port.name] = port.width;
+      if (port.isSigned) _wa.signedSignals.add(port.name);
     }
 
     final functions = [
@@ -147,6 +148,7 @@ class RohdGenerator {
     for (final item in items) {
       if (item is SignalDeclaration) {
         _wa.signalWidths[item.name] = item.width;
+        if (item.isSigned) _wa.signedSignals.add(item.name);
         if (item.unpackedDims.isNotEmpty) {
           _wa.arraySignals.add(item.name);
           _wa.arrayDimensions[item.name] = item.unpackedDims.length;

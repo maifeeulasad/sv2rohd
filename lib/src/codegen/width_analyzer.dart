@@ -92,6 +92,9 @@ class WidthAnalyzer {
   /// Number of unpacked dimensions per array signal.
   final Map<String, int> arrayDimensions = {};
 
+  /// SV names of signals/ports declared `signed`.
+  final Set<String> signedSignals = {};
+
   /// Inliner used to resolve the width of user function calls; may be null.
   FunctionInliner? functionInliner;
 

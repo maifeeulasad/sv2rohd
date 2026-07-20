@@ -144,11 +144,19 @@ generated constructors and instance outputs are wired back with `<=`.
 | Literals: `8'hFF`, `3'd5`, `'0`, `'1` | sized `Const`s / context-sized ints |
 | Size casts `WIDTH'(expr)` | context-determined widths |
 | `$clog2`, `$bits`, `$signed`/`$unsigned` | `log2Ceil`, `.width`, pass-through |
+| `signed` comparisons (`<`, `<=`, `>`, `>=`) | two's-complement `mux` on the sign bits |
 
 Width mismatches between assignment sides are resolved symbolically: when the
 target is wider, operands are zero-extended (preserving carries); when
 narrower, the value is truncated with `getRange` — mirroring SystemVerilog
 context-determined width semantics.
+
+`signed` is tracked through the IR. Since ROHD's comparison operators are
+unsigned, a signed comparison is lowered to the two's-complement identity
+(`(a[msb] != b[msb]) ? a[msb] : a <u b`), verified equivalent to a reference
+simulator. Signed add/subtract are bit-identical to unsigned; signed
+multiply/divide/modulo are emitted as unsigned with a diagnostic (ROHD has no
+signed variant).
 
 Combinational `function`s are inlined at their call sites: the body is reduced
 to a single value expression (straight-line assignments, `if`/`else` and `case`

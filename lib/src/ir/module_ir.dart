@@ -75,12 +75,16 @@ class PortDeclaration extends IrDeclaration {
   final IrType? type;
   final VectorWidth? width;
 
+  /// True when declared `signed` (two's-complement semantics).
+  final bool isSigned;
+
   PortDeclaration({
     required super.location,
     required super.name,
     required this.direction,
     this.type,
     this.width,
+    this.isSigned = false,
   });
 
   @override
@@ -110,6 +114,9 @@ class SignalDeclaration extends IrDeclaration {
   /// `logic [7:0] mem [0:DEPTH-1];`. Empty for plain signals.
   final List<VectorWidth> unpackedDims;
 
+  /// True when declared `signed` (two's-complement semantics).
+  final bool isSigned;
+
   SignalDeclaration({
     required super.location,
     required super.name,
@@ -118,6 +125,7 @@ class SignalDeclaration extends IrDeclaration {
     this.width,
     this.initialValue,
     this.unpackedDims = const [],
+    this.isSigned = false,
   });
 
   @override

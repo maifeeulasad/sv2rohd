@@ -501,34 +501,43 @@ class SvParser {
     final ports = <PortDeclaration>[];
     var direction = PortDirection.inout;
     VectorWidth? width;
+    var isSigned = false;
 
     while (!_check(')') && !_current.isEof) {
       if (_check('input')) {
         _advance();
         direction = PortDirection.input;
         width = null;
+        isSigned = false;
       } else if (_check('output')) {
         _advance();
         direction = PortDirection.output;
         width = null;
+        isSigned = false;
       } else if (_check('inout')) {
         _advance();
         direction = PortDirection.inout;
         width = null;
+        isSigned = false;
       }
 
-      // Optional net/var type keywords.
+      // Optional net/var type keywords + signedness.
       var sawType = false;
+      var sawSigned = false;
       while (_varTypes.contains(_current.text) ||
           _netTypes.contains(_current.text) ||
           _intTypes.contains(_current.text) ||
           _check('var') ||
           _check('signed') ||
           _check('unsigned')) {
+        if (_check('signed')) sawSigned = true;
         _advance();
         sawType = true;
       }
-      if (sawType) width = null;
+      if (sawType) {
+        width = null;
+        isSigned = sawSigned;
+      }
 
       // Optional packed dimension(s); the first is the vector width.
       if (_check('[')) {
@@ -551,6 +560,7 @@ class SvParser {
         name: name,
         direction: direction,
         width: width,
+        isSigned: isSigned,
       ));
 
       if (!_match(',')) break;
@@ -713,10 +723,12 @@ class SvParser {
       'output' => PortDirection.output,
       _ => PortDirection.inout,
     };
+    var isSigned = false;
     while (_varTypes.contains(_current.text) ||
         _netTypes.contains(_current.text) ||
         _check('signed') ||
         _check('unsigned')) {
+      if (_check('signed')) isSigned = true;
       _advance();
     }
     VectorWidth? width;
@@ -731,6 +743,7 @@ class SvParser {
         name: name,
         direction: direction,
         width: width,
+        isSigned: isSigned,
       );
       if (index >= 0) {
         ports[index] = updated;
@@ -1052,7 +1065,9 @@ class SvParser {
       'bit' => SignalType.bit,
       _ => SignalType.logic,
     };
+    var isSigned = false;
     while (_check('signed') || _check('unsigned')) {
+      if (_check('signed')) isSigned = true;
       _advance();
     }
     VectorWidth? width;
@@ -1082,6 +1097,7 @@ class SvParser {
         width: width,
         initialValue: initialValue,
         unpackedDims: unpackedDims,
+        isSigned: isSigned,
       ));
       if (!_match(',')) break;
     }

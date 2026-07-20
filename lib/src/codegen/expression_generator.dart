@@ -287,6 +287,28 @@ class ExpressionGenerator {
   }
 
   String _generateBinaryOp(BinaryExpression expr) {
+    // Signed comparisons need the two's-complement identity regardless of
+    // which operand is constant, so handle them before any operand rewrite.
+    if (_isRelational(expr.operator) && _isSignedComparison(expr)) {
+      return _signedCompare(expr, _relationalName(expr.operator));
+    }
+
+    // ROHD has no signed multiply/divide/modulo. Add/subtract are bit-
+    // identical to unsigned in two's complement, but these are not, so warn
+    // rather than silently emitting unsigned arithmetic.
+    if ((expr.operator == BinaryOperator.multiply ||
+            expr.operator == BinaryOperator.divide ||
+            expr.operator == BinaryOperator.modulo) &&
+        isSignedExpr(expr.left) &&
+        isSignedExpr(expr.right)) {
+      diagnostics?.warning(
+        'signed multiply/divide/modulo is generated as unsigned (ROHD has no '
+        'signed variant); the low bits of a truncated result are correct, '
+        'but verify wider or division/modulo results',
+        code: 'GEN0033',
+      );
+    }
+
     final leftIsInt = isIntDomain(expr.left);
     final rightIsInt = isIntDomain(expr.right);
 
@@ -349,6 +371,118 @@ class ExpressionGenerator {
         return '${_postfixOperand(left)}.gt(${generate(expr.right)})';
       case BinaryOperator.greaterThanOrEqual:
         return '${_postfixOperand(left)}.gte(${generate(expr.right)})';
+    }
+  }
+
+  static bool _isRelational(BinaryOperator op) =>
+      op == BinaryOperator.lessThan ||
+      op == BinaryOperator.lessThanOrEqual ||
+      op == BinaryOperator.greaterThan ||
+      op == BinaryOperator.greaterThanOrEqual;
+
+  static String _relationalName(BinaryOperator op) => switch (op) {
+        BinaryOperator.lessThan => 'lt',
+        BinaryOperator.lessThanOrEqual => 'lte',
+        BinaryOperator.greaterThan => 'gt',
+        _ => 'gte',
+      };
+
+  Set<String> get _signedSignals =>
+      widthAnalyzer?.signedSignals ?? const <String>{};
+
+  /// True when [expr] has two's-complement (signed) type per SystemVerilog:
+  /// a signed signal, `$signed(...)`, unary minus, or an arithmetic
+  /// combination of signed operands. Part-selects and reductions are
+  /// unsigned. Not used for elaboration-time (int) expressions.
+  bool isSignedExpr(IrExpression expr) {
+    if (expr is IdentifierExpression) {
+      return _signedSignals.contains(expr.identifier);
+    }
+    if (expr is UnaryExpression) {
+      if (expr.operator == UnaryOperator.minus) return true;
+      if (expr.operator == UnaryOperator.plus ||
+          expr.operator == UnaryOperator.bitwiseNot) {
+        return isSignedExpr(expr.operand);
+      }
+      return false;
+    }
+    if (expr is BinaryExpression) {
+      switch (expr.operator) {
+        case BinaryOperator.add:
+        case BinaryOperator.subtract:
+        case BinaryOperator.multiply:
+        case BinaryOperator.divide:
+        case BinaryOperator.modulo:
+        case BinaryOperator.and:
+        case BinaryOperator.or:
+        case BinaryOperator.xor:
+          return isSignedExpr(expr.left) && isSignedExpr(expr.right);
+        default:
+          return false;
+      }
+    }
+    if (expr is FunctionCallExpression) {
+      return expr.functionName == r'$signed';
+    }
+    if (expr is ConditionalExpression) {
+      return isSignedExpr(expr.trueExpr) && isSignedExpr(expr.falseExpr);
+    }
+    return false;
+  }
+
+  /// A comparison is signed only when both operands are signed (a literal
+  /// operand adopts the other operand's signedness), per SystemVerilog.
+  bool _isSignedComparison(BinaryExpression expr) {
+    final l = expr.left;
+    final r = expr.right;
+    final lSigned = isSignedExpr(l);
+    final rSigned = isSignedExpr(r);
+    final lIsSigned = lSigned || (l is LiteralExpression && rSigned);
+    final rIsSigned = rSigned || (r is LiteralExpression && lSigned);
+    return lIsSigned && rIsSigned;
+  }
+
+  /// Emits a signed comparison using the two's-complement identity, since
+  /// ROHD's comparison operators are unsigned. For same-sign operands the
+  /// unsigned comparison already orders correctly; when the sign bits differ,
+  /// the negative operand (sign bit 1) is the smaller one.
+  ///
+  ///   a <s b  ==  (a[msb] != b[msb]) ? a[msb] : (a <u b)
+  ///   a >s b  ==  (a[msb] != b[msb]) ? b[msb] : (a >u b)
+  String _signedCompare(BinaryExpression expr, String op) {
+    final leftConst = expr.left is LiteralExpression || isIntDomain(expr.left);
+    final rightConst =
+        expr.right is LiteralExpression || isIntDomain(expr.right);
+
+    // Size a constant operand to the other (signal) operand's width so the
+    // sign bit and comparison line up.
+    String a;
+    String b;
+    if (leftConst && !rightConst) {
+      b = _postfixOperand(generate(expr.right));
+      a = _postfixOperand(generateLogic(expr.left, widthContext: b));
+    } else if (rightConst && !leftConst) {
+      a = _postfixOperand(generate(expr.left));
+      b = _postfixOperand(generateLogic(expr.right, widthContext: a));
+    } else {
+      a = _postfixOperand(generateLogic(expr.left));
+      b = _postfixOperand(generateLogic(expr.right));
+    }
+
+    final sa = '$a[-1]';
+    final sb = '$b[-1]';
+    final differ = '$sa.neq($sb)';
+    switch (op) {
+      case 'lt':
+        return 'mux($differ, $sa, $a.lt($b))';
+      case 'gt':
+        return 'mux($differ, $sb, $a.gt($b))';
+      case 'lte': // ~(a >s b)
+        return '~mux($differ, $sb, $a.gt($b))';
+      case 'gte': // ~(a <s b)
+        return '~mux($differ, $sa, $a.lt($b))';
+      default:
+        return '$a.lt($b)';
     }
   }
 
