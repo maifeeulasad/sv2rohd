@@ -18,14 +18,21 @@ dependencies:
   collection: ^1.18.0
   yaml: ^3.1.0
 
-  # ROHD for generated code validation
-  rohd: ^0.5.1
+  # ROHD for generated code validation.
+  rohd: '>=0.5.1'
 
 dev_dependencies:
   test: ^1.24.0
   build_runner: ^2.4.0
   lints: ^3.0.0
   mockito: ^5.4.0
+
+# Always build against the local ROHD checkout (the latest, and the
+# direction ROHD is heading). Clone it as a sibling directory: `../rohd`
+# (see the `download-rohd` Makefile target).
+dependency_overrides:
+  rohd:
+    path: ../rohd
 
 executables:
   sv2rohd: bin/sv2rohd.dart
