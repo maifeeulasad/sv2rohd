@@ -409,11 +409,37 @@ class SvParser {
     while (!_current.isEof) {
       if (_check('module') || _check('macromodule')) {
         modules.add(_parseModule());
+      } else if (_check('interface')) {
+        _warn('interface declarations are not supported; skipped '
+            '(ROHD has no interface concept)');
+        _skipToMatching('interface', 'endinterface');
+      } else if (_check('package')) {
+        _warn('package declarations are not supported; skipped');
+        _skipToMatching('package', 'endpackage');
+      } else if (_check('program')) {
+        _warn('program blocks are not supported; skipped');
+        _skipToMatching('program', 'endprogram');
+      } else if (_check('checker')) {
+        _warn('checker declarations are not supported; skipped');
+        _skipToMatching('checker', 'endchecker');
       } else {
         _advance();
       }
     }
     return modules;
+  }
+
+  static bool _isAssertKeyword(String text) =>
+      text == 'assert' ||
+      text == 'assume' ||
+      text == 'cover' ||
+      text == 'restrict' ||
+      text == 'expect';
+
+  /// Skips an assertion statement, including a trailing `else` action.
+  void _skipAssertion() {
+    _skipPast(';');
+    if (_check('else')) _skipPast(';');
   }
 
   // ── Module ───────────────────────────────────────────────────────
@@ -701,6 +727,29 @@ class SvParser {
     }
 
     if (t == 'timeunit' || t == 'timeprecision' || t == 'import') {
+      _skipPast(';');
+      return const [];
+    }
+
+    // SystemVerilog assertions (immediate or concurrent), including a
+    // leading `label :`. Not synthesizable logic; skip with a diagnostic.
+    if (_isAssertKeyword(t) ||
+        (_checkIdentifier() &&
+            _peek().text == ':' &&
+            _isAssertKeyword(_peek(2).text))) {
+      _warn('SystemVerilog assertions are not supported; skipped');
+      _skipAssertion();
+      return const [];
+    }
+
+    if (t == 'property' || t == 'sequence') {
+      _warn('$t declarations are not supported; skipped');
+      _skipToMatching(t, t == 'property' ? 'endproperty' : 'endsequence');
+      return const [];
+    }
+
+    if (t == 'modport') {
+      _warn('modport declarations are not supported; skipped');
       _skipPast(';');
       return const [];
     }

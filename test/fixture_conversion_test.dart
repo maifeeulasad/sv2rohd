@@ -290,6 +290,33 @@ void main() {
       expect(converter.hasErrors, isFalse);
     });
 
+    test('assertions/properties are skipped but the real logic converts', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/with_assertions.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/with_assertions.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(outputFile.existsSync(), isTrue);
+      // The surrounding logic survives the assertion skipping.
+      expect(output, contains('class WithAssertions extends Module'));
+      expect(output, contains('sum < (a + b)'));
+      // No assertion/property residue leaks into the output (the `|->`
+      // implication and `endproperty` only appear in the skipped SVA).
+      expect(output, isNot(contains('|->')));
+      expect(output, isNot(contains('endproperty')));
+      // Clean diagnostics, no hard errors.
+      expect(converter.hasErrors, isFalse);
+      final warnings = converter.diagnostics.warnings.map((d) => d.message);
+      expect(warnings.any((m) => m.contains('property declarations')), isTrue);
+      expect(
+        warnings.where((m) => m.contains('assertions are not supported')),
+        hasLength(2),
+      );
+    });
+
     test('hierarchy emits both modules and resolved instantiations', () {
       final converter = SV2ROHD();
       final outputFile = File('${tempDir.path}/hierarchy.dart');

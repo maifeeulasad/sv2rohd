@@ -58,6 +58,31 @@ endmodule
       expect(modules.map((m) => m.name), ['a', 'b']);
     });
 
+    test('skips interface and package blocks but keeps the module', () {
+      final diagnostics = DiagnosticCollector();
+      final parser = SvParser('''
+package pkg;
+  localparam int W = 8;
+endpackage
+
+interface my_if;
+  logic valid;
+  modport master(output valid);
+endinterface
+
+module top(input logic x, output logic y);
+  assign y = x;
+endmodule
+''', diagnostics: diagnostics, sourceName: 'test.sv');
+      final modules = parser.parseCompilationUnit();
+
+      expect(modules.map((m) => m.name), ['top']);
+      expect(diagnostics.hasErrors, isFalse);
+      final warnings = diagnostics.warnings.map((d) => d.message);
+      expect(warnings.any((m) => m.contains('interface')), isTrue);
+      expect(warnings.any((m) => m.contains('package')), isTrue);
+    });
+
     test('parses signal declarations including unpacked arrays', () {
       final module = parse('''
 module m;
