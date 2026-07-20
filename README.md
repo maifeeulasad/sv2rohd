@@ -192,7 +192,7 @@ make setup           # dart pub get
 ```bash
 make test        # run all tests
 make roundtrip   # SV -> ROHD -> build -> SV roundtrip tests
-make equiv       # SV<->ROHD functional equivalence (installs Icarus Verilog)
+make test-equivalence  # SV<->ROHD functional equivalence (installs Icarus Verilog)
 make lint        # dart analyze --fatal-infos
 make format      # dart format
 make ci          # format check + analyze + test
@@ -205,8 +205,9 @@ output for the expected ports and `always_ff`/`always_comb`/`case` structure.
 
 ### Functional equivalence checking
 
-`make equiv` proves that the original SystemVerilog and the ROHD sv2rohd
-generates from it compute **the same outputs**, not just that both build:
+`make test-equivalence` proves that the original SystemVerilog and the ROHD
+sv2rohd generates from it compute **the same outputs**, not just that both
+build:
 
 1. `original.sv` → sv2rohd → ROHD Dart → `generateSynth()` → `rohd_generated.sv`.
 2. A generated **miter** testbench instantiates *both* the original module and
