@@ -164,10 +164,13 @@ become nested ternaries, `return`), and the call arguments are substituted for
 the parameters. A function body that can't be reduced (e.g. contains a loop)
 produces a diagnostic instead of silently wrong output.
 
-Not supported (skipped with diagnostics): interfaces, classes, tasks, functions
-with loops, `initial` blocks (use ROHD `Simulator` for testbenches), dynamic
-part selects, and x/z four-state literals outside casez/casex (converted to 0
-with a warning).
+Not supported, but recognized and **skipped with a clear diagnostic** (so
+they never silently corrupt the surrounding logic): interfaces/modports,
+SystemVerilog assertions (`assert`/`assume`/`cover`/`property`/`sequence`),
+packages, programs, checkers, classes, tasks, and functions with loops. Also
+skipped: `initial` blocks (use ROHD `Simulator` for testbenches), dynamic part
+selects, and x/z four-state literals outside casez/casex (converted to 0 with a
+warning).
 
 ## How it works
 
