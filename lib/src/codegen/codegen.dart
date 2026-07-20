@@ -9,6 +9,7 @@ export 'instantiation_generator.dart';
 export 'generate_block_generator.dart';
 export 'statement_generator.dart';
 export 'testbench_generator.dart';
+export 'testbench_scaffold.dart';
 export 'naming_strategy.dart';
 export 'width_analyzer.dart';
 export 'function_inliner.dart';

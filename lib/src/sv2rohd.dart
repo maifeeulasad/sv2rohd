@@ -7,6 +7,7 @@ import 'package:args/args.dart';
 import 'package:path/path.dart' as p;
 import 'common/common.dart';
 import 'codegen/naming_strategy.dart';
+import 'codegen/testbench_scaffold.dart';
 import 'config/config.dart';
 import 'frontend/frontend.dart';
 import 'ir/ir.dart';
@@ -33,12 +34,30 @@ class SV2ROHD {
   /// Converts a SystemVerilog file to ROHD Dart code.
   ///
   /// All modules found in the file are emitted into a single Dart source
-  /// file so that instantiations can resolve each other.
-  String convert(String sourcePath, {String? outputPath}) {
+  /// file so that instantiations can resolve each other. When
+  /// [generateTestbench] is true and [outputPath] is given, a runnable ROHD
+  /// testbench scaffold is written alongside it (as `<base>_test.dart`) for
+  /// the first module.
+  String convert(
+    String sourcePath, {
+    String? outputPath,
+    bool generateTestbench = false,
+  }) {
     final source = _readFile(sourcePath);
-    final output = convertSource(source, sourceName: sourcePath);
+    final modules = _parseModules(source, sourcePath);
+    final output = _generate(modules, source, sourcePath);
+
     if (outputPath != null) {
       _writeFile(outputPath, output);
+      if (generateTestbench && modules.isNotEmpty) {
+        final tbPath = p.join(
+          p.dirname(outputPath),
+          '${p.basenameWithoutExtension(outputPath)}_test.dart',
+        );
+        final scaffold = TestbenchScaffold(namingStrategy: namingStrategy)
+            .generate(modules.first, dutImport: p.basename(outputPath));
+        _writeFile(tbPath, scaffold);
+      }
     }
     return output;
   }
@@ -46,25 +65,48 @@ class SV2ROHD {
   /// Converts SystemVerilog [source] text directly to ROHD Dart code,
   /// without touching the filesystem.
   String convertSource(String source, {String sourceName = 'source.sv'}) {
+    final modules = _parseModules(source, sourceName);
+    return _generate(modules, source, sourceName);
+  }
+
+  /// Generates a runnable ROHD testbench scaffold for the first module in
+  /// [source]. [dutImport] is the import path of the generated module file.
+  String? generateTestbenchSource(
+    String source, {
+    String sourceName = 'source.sv',
+    required String dutImport,
+  }) {
+    final modules = _parseModules(source, sourceName);
+    if (modules.isEmpty) return null;
+    return TestbenchScaffold(namingStrategy: namingStrategy)
+        .generate(modules.first, dutImport: dutImport);
+  }
+
+  List<ModuleDeclaration> _parseModules(String source, String sourceName) {
     final frontend = Frontend(
       diagnostics: diagnostics,
       includePaths: includePaths,
     );
     final parsed = frontend.parseSource(source, sourceName: sourceName);
-
     final builder = IrBuilder(
       diagnostics: diagnostics,
       namingStrategy: namingStrategy,
     );
-    final modules = builder.buildModules(parsed);
+    return builder.buildModules(parsed);
+  }
 
+  String _generate(
+    List<ModuleDeclaration> modules,
+    String source,
+    String sourceName,
+  ) {
     final generator = RohdGenerator(
       options: GeneratorOptions(namingStrategy: namingStrategy),
       diagnostics: diagnostics,
     );
     return modules.isEmpty
         ? generator.generate(ModuleDeclaration(
-            location: parsed.sourceText.getLocation(0),
+            location: SourceLocation.start(sourceName),
             name: p.basenameWithoutExtension(sourceName),
           ))
         : generator.generateAll(modules);
@@ -99,6 +141,10 @@ void main(List<String> arguments) {
     ..addOption('output', abbr: 'o', help: 'Output file or directory path')
     ..addOption('config', abbr: 'c', help: 'YAML configuration file')
     ..addMultiOption('include', abbr: 'I', help: 'Include search path')
+    ..addFlag('testbench',
+        abbr: 't',
+        help: 'Also emit a ROHD testbench scaffold (<base>_test.dart)',
+        negatable: false)
     ..addFlag('verbose', abbr: 'v', help: 'Verbose output', negatable: false)
     ..addFlag('version', help: 'Show version', negatable: false)
     ..addFlag('help', abbr: 'h', help: 'Show help', negatable: false);
@@ -117,6 +163,7 @@ Options:
   -o, --output <path>     Output file or directory path
   -c, --config <file>     YAML configuration file
   -I, --include <path>    Include search path (repeatable)
+  -t, --testbench         Also emit a ROHD testbench scaffold
   -v, --verbose           Verbose output
       --version           Show version
   -h, --help              Show this help message
@@ -183,16 +230,29 @@ Options:
       }
     }
 
+    final generateTestbench =
+        results['testbench'] == true || config.codegen.generateTests;
     final converter = SV2ROHD(includePaths: includePaths);
     final result = converter.convert(
       inputPath,
       outputPath: outputPath,
+      generateTestbench: generateTestbench,
     );
 
     if (outputPath == null) {
       print(result);
+      if (generateTestbench) {
+        print('Note: --testbench needs -o to write the scaffold file.');
+      }
     } else {
       print('Output written to $outputPath');
+      if (generateTestbench) {
+        final tbPath = p.join(
+          p.dirname(outputPath),
+          '${p.basenameWithoutExtension(outputPath)}_test.dart',
+        );
+        print('Testbench scaffold written to $tbPath');
+      }
     }
 
     final verbose = results['verbose'] == true;
