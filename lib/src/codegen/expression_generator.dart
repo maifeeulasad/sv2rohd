@@ -6,6 +6,7 @@
 
 import '../common/common.dart';
 import '../ir/ir.dart';
+import 'function_inliner.dart';
 import 'naming_strategy.dart';
 import 'width_analyzer.dart';
 
@@ -24,12 +25,16 @@ class ExpressionGenerator {
   /// SV names of signals represented as `List<Logic>` (unpacked arrays).
   final Set<String> arraySignals;
 
+  /// Inliner for user-defined function calls; null when there are none.
+  final FunctionInliner? functionInliner;
+
   final DiagnosticCollector? diagnostics;
 
   ExpressionGenerator({
     required this.namingStrategy,
     this.widthAnalyzer,
     Set<String>? arraySignals,
+    this.functionInliner,
     this.diagnostics,
   }) : arraySignals = arraySignals ?? <String>{};
 
@@ -440,8 +445,23 @@ class ExpressionGenerator {
   }
 
   String _generateFunctionCall(FunctionCallExpression expr) {
-    final args = expr.arguments.map((a) => generate(a)).join(', ');
+    // Inline calls to user-defined functions by generating their reduced,
+    // argument-substituted body.
+    final inliner = functionInliner;
+    if (inliner != null && inliner.isFunction(expr.functionName)) {
+      final inlined = inliner.inline(expr.functionName, expr.arguments);
+      if (inlined != null) {
+        return _postfixOperand(generate(inlined));
+      }
+      diagnostics?.error(
+        "call to function '${expr.functionName}' could not be inlined; its "
+        'body is not supported',
+        code: 'GEN0032',
+      );
+      return 'Const(0)';
+    }
 
+    final args = expr.arguments.map((a) => generate(a)).join(', ');
     switch (expr.functionName) {
       case r'$signed':
       case r'$unsigned':

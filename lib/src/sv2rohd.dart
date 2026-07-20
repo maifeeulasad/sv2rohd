@@ -36,12 +36,21 @@ class SV2ROHD {
   /// file so that instantiations can resolve each other.
   String convert(String sourcePath, {String? outputPath}) {
     final source = _readFile(sourcePath);
+    final output = convertSource(source, sourceName: sourcePath);
+    if (outputPath != null) {
+      _writeFile(outputPath, output);
+    }
+    return output;
+  }
 
+  /// Converts SystemVerilog [source] text directly to ROHD Dart code,
+  /// without touching the filesystem.
+  String convertSource(String source, {String sourceName = 'source.sv'}) {
     final frontend = Frontend(
       diagnostics: diagnostics,
       includePaths: includePaths,
     );
-    final parsed = frontend.parseSource(source, sourceName: sourcePath);
+    final parsed = frontend.parseSource(source, sourceName: sourceName);
 
     final builder = IrBuilder(
       diagnostics: diagnostics,
@@ -53,18 +62,12 @@ class SV2ROHD {
       options: GeneratorOptions(namingStrategy: namingStrategy),
       diagnostics: diagnostics,
     );
-    final output = modules.isEmpty
+    return modules.isEmpty
         ? generator.generate(ModuleDeclaration(
             location: parsed.sourceText.getLocation(0),
-            name: p.basenameWithoutExtension(sourcePath),
+            name: p.basenameWithoutExtension(sourceName),
           ))
         : generator.generateAll(modules);
-
-    if (outputPath != null) {
-      _writeFile(outputPath, output);
-    }
-
-    return output;
   }
 
   /// Returns the diagnostic summary.

@@ -8,6 +8,7 @@ import '../common/common.dart';
 import '../analysis/symbol.dart';
 import '../ir/ir.dart';
 import 'expression_generator.dart';
+import 'function_inliner.dart';
 import 'statement_generator.dart';
 import 'naming_strategy.dart';
 import 'width_analyzer.dart';
@@ -118,10 +119,20 @@ class RohdGenerator {
       _wa.signalWidths[port.name] = port.width;
     }
 
+    final functions = [
+      for (final item in module.items)
+        if (item is FunctionDeclaration) item,
+    ];
+    final inliner = functions.isEmpty
+        ? null
+        : FunctionInliner(functions, diagnostics: diagnostics);
+    _wa.functionInliner = inliner;
+
     _exprGen = ExpressionGenerator(
       namingStrategy: namingStrategy,
       widthAnalyzer: _wa,
       arraySignals: _wa.arraySignals,
+      functionInliner: inliner,
       diagnostics: diagnostics,
     );
     _stmtGen = StatementGenerator(
@@ -291,7 +302,10 @@ class RohdGenerator {
         }
         continue;
       }
-      if (item is GenvarDeclaration || item is ParameterDeclaration) {
+      if (item is GenvarDeclaration ||
+          item is ParameterDeclaration ||
+          item is FunctionDeclaration) {
+        // Functions are inlined at call sites, not emitted.
         continue;
       }
       if (item is AlwaysBlock) {
