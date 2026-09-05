@@ -39,6 +39,7 @@ void main() {
       const _Fixture('muxhot', 'fixtures/sv_samples/muxhot.sv'),
       const _Fixture('muxpri', 'fixtures/sv_samples/muxpri.sv'),
       const _Fixture('onehot', 'fixtures/sv_samples/onehot.sv'),
+      const _Fixture('parametric_fsm', 'fixtures/sv_samples/parametric_fsm.sv'),
       const _Fixture('pipeline', 'fixtures/sv_samples/pipeline.sv'),
       const _Fixture('shiftreg', 'fixtures/sv_samples/shiftreg.sv'),
       const _Fixture('tff', 'fixtures/sv_samples/tff.sv'),

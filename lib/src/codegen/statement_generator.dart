@@ -150,13 +150,21 @@ class StatementGenerator {
       return exprGen.generateConditional(value, widthContext: targetRef);
     }
     final targetWidth = wa.widthOfExpr(target);
-    final valueWidth = wa.widthOfExpr(value);
-    if (targetWidth == null || valueWidth == null) {
+    if (targetWidth == null) {
       return exprGen.generate(value);
     }
-    final diff = valueWidth - targetWidth;
-    if (!diff.isConstant || diff.constant == 0) {
-      return exprGen.generate(value);
+    final valueWidth = wa.widthOfExpr(value);
+    // Equal widths need no adjustment. Otherwise (a non-zero constant diff, a
+    // symbolic/parameterized diff, or a value whose overall width can't be
+    // resolved — e.g. a mixed-width `a ^ b`) fit to the target: `_fitted`
+    // emits static zeroExtend/getRange for constant diffs and a runtime
+    // `_resize` when the direction is only known at construction time, and
+    // recurses into binary operands so each is sized individually.
+    if (valueWidth != null) {
+      final diff = valueWidth - targetWidth;
+      if (diff.isConstant && diff.constant == 0) {
+        return exprGen.generate(value);
+      }
     }
     final targetRef = _postfix(exprGen.generate(target));
     return _fitted(value, targetRef, targetWidth);
@@ -304,6 +312,11 @@ class StatementGenerator {
       if (diff.isConstant && diff.constant > 0) {
         return '${_postfix(exprGen.generate(value))}'
             '.getRange(0, $targetRef.width)';
+      }
+      if (!diff.isConstant) {
+        // Parameterized widths: the truncate-vs-extend direction is only known
+        // at construction time, so defer to the runtime `_resize` helper.
+        return '_resize(${exprGen.generate(value)}, $targetRef.width)';
       }
     }
     return exprGen.generate(value);

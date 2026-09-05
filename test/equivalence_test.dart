@@ -43,6 +43,7 @@ void main() {
       'muxhot',
       'muxpri',
       'onehot',
+      'parametric_fsm',
       'partsel_write',
       'pipeline',
       'shiftreg',

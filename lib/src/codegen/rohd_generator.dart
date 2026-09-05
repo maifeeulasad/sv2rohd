@@ -87,12 +87,29 @@ class RohdGenerator {
         ..writeln('int log2Ceil(int x) => x <= 1 ? 0 : (x - 1).bitLength;')
         ..writeln();
     }
+    if (_usesResize(body)) {
+      header
+        ..writeln('/// Resizes [v] to [width] bits: truncates the high bits when')
+        ..writeln('/// wider, zero-extends when narrower. Used for SystemVerilog')
+        ..writeln('/// context-determined widths that are parameterized (so the')
+        ..writeln('/// direction is only known at construction time).')
+        ..writeln('Logic _resize(Logic v, int width) => v.width == width')
+        ..writeln('    ? v')
+        ..writeln('    : v.width > width')
+        ..writeln('        ? v.getRange(0, width)')
+        ..writeln('        : v.zeroExtend(width);')
+        ..writeln();
+    }
     return header.toString() + body;
   }
 
   /// True when the generated [body] calls the `log2Ceil` helper (emitted for
   /// `$clog2` used in an int/width context).
   bool _usesLog2Ceil(String body) => RegExp(r'\blog2Ceil\(').hasMatch(body);
+
+  /// True when the generated [body] calls the `_resize` helper (emitted for
+  /// symbolic context-determined width normalization).
+  bool _usesResize(String body) => RegExp(r'\b_resize\(').hasMatch(body);
 
   // ── Module ───────────────────────────────────────────────────────
 

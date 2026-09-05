@@ -452,6 +452,11 @@ void main() {
       expect(output, contains("out = addOutput('out', width: dw)"));
       // The ranged parameter is a normal int constructor arg.
       expect(output, contains('int seed = 2779096485'));
+      // A mixed-width assignment with parameterized widths (`in` is DW-wide,
+      // `next_state` is $clog2(STATES)-wide) is normalized with the runtime
+      // `_resize` helper (#36), which the file defines.
+      expect(output, contains('Logic _resize(Logic v, int width)'));
+      expect(output, contains('_resize(in_, nextState.width)'));
     });
 
     test('dynamic-bound part-select is a clean diagnostic, not broken code',
