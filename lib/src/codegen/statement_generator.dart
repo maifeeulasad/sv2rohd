@@ -392,9 +392,12 @@ class StatementGenerator {
     final width = wa.widthOfExpr(value);
     if (width != null) {
       final diff = width - targetWidth;
+      // A signed value must sign-extend (not zero-extend) when widened.
+      final signed = exprGen.isSignedExpr(value);
+      final extend = signed ? 'signExtend' : 'zeroExtend';
       if (diff.isConstant && diff.constant < 0) {
         return '${_postfix(exprGen.generate(value))}'
-            '.zeroExtend($targetRef.width)';
+            '.$extend($targetRef.width)';
       }
       if (diff.isConstant && diff.constant > 0) {
         return '${_postfix(exprGen.generate(value))}'
@@ -402,8 +405,10 @@ class StatementGenerator {
       }
       if (!diff.isConstant) {
         // Parameterized widths: the truncate-vs-extend direction is only known
-        // at construction time, so defer to the runtime `_resize` helper.
-        return '_resize(${exprGen.generate(value)}, $targetRef.width)';
+        // at construction time, so defer to the runtime `_resize` helper
+        // (sign-aware for signed values).
+        final helper = signed ? '_resizeSigned' : '_resize';
+        return '$helper(${exprGen.generate(value)}, $targetRef.width)';
       }
     }
     return exprGen.generate(value);

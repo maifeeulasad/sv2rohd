@@ -100,6 +100,17 @@ class RohdGenerator {
         ..writeln('        : v.zeroExtend(width);')
         ..writeln();
     }
+    if (_usesResizeSigned(body)) {
+      header
+        ..writeln('/// Like [_resize] but sign-extends (not zero-extends) when')
+        ..writeln('/// widening, for signed values.')
+        ..writeln('Logic _resizeSigned(Logic v, int width) => v.width == width')
+        ..writeln('    ? v')
+        ..writeln('    : v.width > width')
+        ..writeln('        ? v.getRange(0, width)')
+        ..writeln('        : v.signExtend(width);')
+        ..writeln();
+    }
     return header.toString() + body;
   }
 
@@ -110,6 +121,9 @@ class RohdGenerator {
   /// True when the generated [body] calls the `_resize` helper (emitted for
   /// symbolic context-determined width normalization).
   bool _usesResize(String body) => RegExp(r'\b_resize\(').hasMatch(body);
+
+  bool _usesResizeSigned(String body) =>
+      RegExp(r'\b_resizeSigned\(').hasMatch(body);
 
   // ── Module ───────────────────────────────────────────────────────
 

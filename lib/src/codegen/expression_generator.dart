@@ -60,6 +60,10 @@ class ExpressionGenerator {
           isIntDomain(expr.falseExpr);
     }
     if (expr is FunctionCallExpression) {
+      if (expr.functionName == r'$signed' ||
+          expr.functionName == r'$unsigned') {
+        return expr.arguments.isNotEmpty && isIntDomain(expr.arguments.first);
+      }
       return expr.functionName == r'$clog2' &&
           expr.arguments.every(isIntDomain);
     }
@@ -67,6 +71,13 @@ class ExpressionGenerator {
     if (expr is PartSelectExpression) return isIntDomain(expr.base);
     if (expr is IndexedPartSelectExpression) {
       return isIntDomain(expr.base) && isIntDomain(expr.index);
+    }
+    // A concatenation/replication of only constants is a constant.
+    if (expr is ConcatenationExpression) {
+      return expr.expressions.isNotEmpty && expr.expressions.every(isIntDomain);
+    }
+    if (expr is ReplicationExpression) {
+      return isIntDomain(expr.count) && isIntDomain(expr.operand);
     }
     return false;
   }
@@ -263,6 +274,14 @@ class ExpressionGenerator {
       final args = expr.arguments.map(generateInt).join(', ');
       return 'log2Ceil($args)';
     }
+    // `$signed`/`$unsigned` of a constant are transparent to its int value
+    // (the bit pattern is unchanged; signedness is handled at the Logic level).
+    if (expr is FunctionCallExpression &&
+        (expr.functionName == r'$signed' ||
+            expr.functionName == r'$unsigned') &&
+        expr.arguments.isNotEmpty) {
+      return generateInt(expr.arguments.first);
+    }
     // Bit/part-selects of an elaboration-time int are integer bit math.
     if (expr is PartSelectExpression && isIntDomain(expr.base)) {
       final base = _postfixOperand(generateInt(expr.base));
@@ -276,11 +295,56 @@ class ExpressionGenerator {
       final base = _postfixOperand(generateInt(expr.base));
       return '(($base >> ${generateInt(expr.index)}) & 1)';
     }
+    // A constant concatenation packs its parts (MSB-first) into one integer:
+    // fold from the LSB up, shifting each part above the bits below it. Used
+    // for packed `localparam` tables like `{ {EW{1'b0}}, 8'd201 }`.
+    if (expr is ConcatenationExpression) {
+      final packed = _packConcatInt(expr);
+      if (packed != null) return packed;
+    }
+    // A constant replication `{N{x}}` = x repeated N times, i.e.
+    // x * (2^(N*w) - 1) / (2^w - 1) where w is x's width.
+    if (expr is ReplicationExpression) {
+      final packed = _replicateInt(expr);
+      if (packed != null) return packed;
+    }
     diagnostics?.warning(
       'unsupported elaboration-time expression ${expr.nodeType}',
       code: 'GEN0003',
     );
     return '0';
+  }
+
+  /// Packs a constant [ConcatenationExpression] into a Dart int expression, or
+  /// null if any part's width can't be resolved. Parts are most-significant
+  /// first; each is masked to its width and shifted above the parts below it.
+  String? _packConcatInt(ConcatenationExpression expr) {
+    final wa = widthAnalyzer;
+    if (wa == null) return null;
+    final terms = <String>[];
+    var offset = '0';
+    for (var i = expr.expressions.length - 1; i >= 0; i--) {
+      final part = expr.expressions[i];
+      final w = wa.widthOfExpr(part)?.render();
+      if (w == null) return null;
+      final pv = generateInt(part);
+      final masked = '(($pv) & ((1 << ($w)) - 1))';
+      terms.add(offset == '0' ? masked : '($masked << ($offset))');
+      offset = offset == '0' ? '($w)' : '($offset + ($w))';
+    }
+    if (terms.isEmpty) return '0';
+    return '(${terms.reversed.join(' + ')})';
+  }
+
+  /// Evaluates a constant replication `{N{x}}` as a Dart int expression, or
+  /// null if the operand width can't be resolved. Equals
+  /// `x * (2^(N*w) - 1) / (2^w - 1)` where `w` is the operand's width.
+  String? _replicateInt(ReplicationExpression expr) {
+    final w = widthAnalyzer?.widthOfExpr(expr.operand)?.render();
+    if (w == null) return null;
+    final count = generateInt(expr.count);
+    final ov = generateInt(expr.operand);
+    return '(($ov) * (((1 << (($count) * ($w))) - 1) ~/ ((1 << ($w)) - 1)))';
   }
 
   /// Relative precedence of an int-domain binary operator (higher binds
