@@ -185,13 +185,30 @@ class StatementGenerator {
     // recurses into binary operands so each is sized individually.
     if (valueWidth != null) {
       final diff = valueWidth - targetWidth;
-      if (diff.isConstant && diff.constant == 0) {
+      // A fittable binary op still needs its operands normalized to a common
+      // width even when the result width already matches the target — e.g.
+      // `sum = sum + a[i*DW +: DW]` where `sum` is wider than the slice. ROHD
+      // requires equal operand widths, so route those through `_fitted`.
+      if (diff.isConstant && diff.constant == 0 && !_isFittableBinary(value)) {
         return exprGen.generate(value);
       }
     }
     final targetRef = _postfix(exprGen.generate(target));
     return _fitted(value, targetRef, targetWidth);
   }
+
+  /// True for binary operations whose operands `_fitted` normalizes to a
+  /// common (target) width: arithmetic and bitwise ops.
+  bool _isFittableBinary(IrExpression value) =>
+      value is BinaryExpression &&
+      const {
+        BinaryOperator.add,
+        BinaryOperator.subtract,
+        BinaryOperator.multiply,
+        BinaryOperator.and,
+        BinaryOperator.or,
+        BinaryOperator.xor,
+      }.contains(value.operator);
 
   /// Like [assignmentValue] but guarantees the result is a `Logic` (as
   /// required by the `<=`/`gets` continuous assignment operator).
