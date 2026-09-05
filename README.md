@@ -245,6 +245,23 @@ All bundled fixtures pass equivalence across parameterized widths, generate
 blocks, enums/FSMs, inlined functions, `casez` wildcards, multi-dimensional
 arrays, and module hierarchy.
 
+## AI assistance
+
+Parts of this codebase were generated with LLM assistance and reviewed by the
+maintainer. The models and tools used during development include:
+
+| Tool | Provider |
+|---|---|
+| Claude Opus 4.8 | Anthropic |
+| Claude Opus 5 | Anthropic |
+| Claude Fable | Anthropic |
+| MiniMax | MiniMax |
+| ChatGPT | OpenAI |
+
+All AI-generated code was reviewed, tested, and verified by the maintainer
+before being merged — every bundled fixture passes the functional-equivalence
+suite described above.
+
 ## License
 
 BSD-3-Clause — see [LICENSE](LICENSE).
