@@ -375,10 +375,17 @@ class RohdGenerator {
 
     _writeLine("$prefix$name = Logic(name: '${signal.name}', width: $width);");
     if (signal.initialValue != null) {
-      diagnostics?.warning(
-        "initial value on '${signal.name}' is ignored (use a reset instead)",
-        code: 'GEN0021',
-      );
+      if (signal.signalType == SignalType.wire) {
+        // `wire x = expr;` is a continuous assignment, not a variable init.
+        final value = _exprGen.generateLogic(signal.initialValue!,
+            widthContext: name);
+        _writeLine('$name <= $value;');
+      } else {
+        diagnostics?.warning(
+          "initial value on '${signal.name}' is ignored (use a reset instead)",
+          code: 'GEN0021',
+        );
+      }
     }
   }
 

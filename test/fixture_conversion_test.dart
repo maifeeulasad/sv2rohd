@@ -494,6 +494,24 @@ void main() {
       expect(output, contains('_resize(a.slice(dw - 1, 0),'));
     });
 
+    test('wire declaration initializer becomes a continuous assignment', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/clz.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/clz.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // `wire abit = a[DW-1-i];` is a continuous assignment, not a dropped init.
+      expect(output, contains('abit <= a[dw - 1 - i]'));
+      expect(
+        converter.diagnostics.warnings.map((d) => d.code),
+        isNot(contains('GEN0021')),
+      );
+    });
+
     test('dynamic-bound part-select is a clean diagnostic, not broken code',
         () {
       final converter = SV2ROHD();

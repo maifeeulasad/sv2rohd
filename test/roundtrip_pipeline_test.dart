@@ -33,6 +33,8 @@ void main() {
       const _Fixture('arbiter', 'fixtures/sv_samples/arbiter.sv'),
       const _Fixture('bin2prio', 'fixtures/sv_samples/bin2prio.sv'),
       const _Fixture('add', 'fixtures/sv_samples/add.sv'),
+      const _Fixture('argmax', 'fixtures/sv_samples/argmax.sv'),
+      const _Fixture('clz', 'fixtures/sv_samples/clz.sv'),
       const _Fixture('mul', 'fixtures/sv_samples/mul.sv'),
       const _Fixture('muladd', 'fixtures/sv_samples/muladd.sv'),
       const _Fixture('partsel_write', 'fixtures/sv_samples/partsel_write.sv'),
