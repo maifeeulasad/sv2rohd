@@ -20,6 +20,9 @@ class StatementGenerator {
   final WidthAnalyzer? widthAnalyzer;
   final DiagnosticCollector? diagnostics;
 
+  /// Counter for unique intermediate names in concatenation-LHS lowering.
+  int _catCounter = 0;
+
   StatementGenerator({
     required this.exprGen,
     required this.namingStrategy,
@@ -52,9 +55,19 @@ class StatementGenerator {
 
     if (stmt is AssignmentStatement) {
       if (stmt.type == AssignmentType.continuous) {
+        if (stmt.target is ConcatenationExpression) {
+          return _concatAssignmentLines(
+              stmt.target as ConcatenationExpression, stmt.value,
+              continuous: true, suffix: suffix);
+        }
         final target = exprGen.generate(stmt.target);
         final logicValue = _requireLogicValue(stmt.target, stmt.value);
         return ['$target <= $logicValue$suffix'];
+      }
+      if (stmt.target is ConcatenationExpression) {
+        return _concatAssignmentLines(
+            stmt.target as ConcatenationExpression, stmt.value,
+            continuous: false, suffix: suffix);
       }
       final select = _selectAssignmentLines(stmt.target, stmt.value, suffix);
       if (select != null) return select;
@@ -64,6 +77,11 @@ class StatementGenerator {
     }
 
     if (stmt is BlockingAssignmentStatement) {
+      if (stmt.target is ConcatenationExpression) {
+        return _concatAssignmentLines(
+            stmt.target as ConcatenationExpression, stmt.value,
+            continuous: false, suffix: suffix);
+      }
       final select = _selectAssignmentLines(stmt.target, stmt.value, suffix);
       if (select != null) return select;
       final target = exprGen.generate(stmt.target);
@@ -71,6 +89,11 @@ class StatementGenerator {
     }
 
     if (stmt is NonBlockingAssignmentStatement) {
+      if (stmt.target is ConcatenationExpression) {
+        return _concatAssignmentLines(
+            stmt.target as ConcatenationExpression, stmt.value,
+            continuous: false, suffix: suffix);
+      }
       final select = _selectAssignmentLines(stmt.target, stmt.value, suffix);
       if (select != null) return select;
       final target = exprGen.generate(stmt.target);
@@ -178,6 +201,60 @@ class StatementGenerator {
       return exprGen.generateLogic(value, widthContext: targetRef);
     }
     return assignmentValue(target, value);
+  }
+
+  /// Lowers an assignment whose left-hand side is a concatenation
+  /// (`{cout, sum} = a + b + cin`). ROHD's swizzle result is read-only, so it
+  /// can't be an assignment target; instead the right-hand side is computed at
+  /// the concatenation's full width and each part is driven from the matching
+  /// bit range (parts are most-significant first, so slicing runs from the LSB
+  /// up).
+  ///
+  /// Continuous assignments use an intermediate signal so the RHS is evaluated
+  /// once; procedural assignments (inside a `Conditional` list, where a local
+  /// signal can't be declared) slice the fitted RHS directly.
+  List<String> _concatAssignmentLines(
+    ConcatenationExpression target,
+    IrExpression value, {
+    required bool continuous,
+    required String suffix,
+  }) {
+    final parts = target.expressions;
+    final partRefs = [for (final p in parts) _postfix(exprGen.generate(p))];
+    final wa = widthAnalyzer;
+    final concatWidth = wa?.widthOfExpr(target);
+    final op = continuous ? '<=' : '<';
+
+    final prelude = <String>[];
+    final String source; // Dart expr holding the full-width RHS value
+
+    if (continuous) {
+      final tmp = '_cat${_catCounter++}';
+      final totalWidth = partRefs.map((r) => '$r.width').join(' + ');
+      final fitted = (wa != null && concatWidth != null)
+          ? _fitted(value, tmp, concatWidth)
+          : exprGen.generate(value);
+      prelude.add('final $tmp = Logic(width: $totalWidth);');
+      prelude.add('$tmp <= $fitted;');
+      source = tmp;
+    } else {
+      // The width comes from the (read-only) swizzle of the parts.
+      final swizzle = '[${partRefs.join(', ')}].swizzle()';
+      final fitted = (wa != null && concatWidth != null)
+          ? _fitted(value, swizzle, concatWidth)
+          : exprGen.generate(value);
+      source = _postfix(fitted);
+    }
+
+    final lines = <String>[...prelude];
+    var lo = '0';
+    for (var i = parts.length - 1; i >= 0; i--) {
+      final ref = partRefs[i];
+      final hi = lo == '0' ? '$ref.width' : '$lo + $ref.width';
+      lines.add('$ref $op $source.getRange($lo, $hi)$suffix');
+      lo = hi;
+    }
+    return lines;
   }
 
   /// Lowers a procedural assignment whose left-hand side is a bit- or
