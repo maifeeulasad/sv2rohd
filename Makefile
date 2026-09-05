@@ -1,4 +1,4 @@
-.PHONY: help setup clean build test test-coverage lint format analyze run docs watch install build-grammar
+.PHONY: help setup clean build test test-coverage lint format analyze run docs watch install
 
 # Variables
 DART := dart
@@ -45,28 +45,6 @@ build: ## Build the project (pub get)
 	@echo "Building project..."
 	@$(DART) pub get
 	@echo "✓ Project built"
-
-build-grammar: ## Build ANTLR grammar files
-	@echo "Building grammar files..."
-	@rm -rf lib/generated/grammar
-	@$(DART) pub run build_runner build --delete-conflicting-outputs
-	@make format
-	@echo "✓ Grammar files built"
-
-antlr-grammar:
-	@echo "Generating ANTLR grammar files..."
-	@rm -rf lib/generated/grammar
-	@java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -o lib/generated grammar/SystemVerilogLexer.g4 && java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -lib lib/generated/grammar -o lib/generated grammar/SystemVerilogParser.g4
-	@make format
-	@echo "✓ ANTLR grammar files generated"
-
-glue-grammar:
-	@echo "Generating glue code for grammar..."
-	@rm -rf lib/generated/grammar
-	@java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -o lib/generated grammar/SystemVerilogLexer.g4
-	@java -jar helper/antlr-4.13.2-complete.jar -Dlanguage=Dart -lib lib/generated/grammar -o lib/generated grammar/SystemVerilogParser.g4
-	@make format
-	@echo "✓ Glue code generated"
 
 compile: setup ## Compile the project to executable
 	@echo "Compiling sv2rohd executable..."
@@ -205,7 +183,6 @@ info: ## Display project information
 	@echo "  Binary: bin/"
 	@echo "  Tests: test/"
 	@echo "  Fixtures: fixtures/"
-	@echo "  Grammar: grammar/"
 
 deps: ## Show project dependencies
 	@echo "Project dependencies:"

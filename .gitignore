@@ -34,8 +34,6 @@ coverage/
 # Generated output
 output/
 
-# Helper tools
-helper/
 # Ignore local tool artifacts but keep committed maintenance scripts.
 tool/*
 !tool/setup_iverilog.sh

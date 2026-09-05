@@ -11,10 +11,7 @@ import 'preprocessor.dart';
 ///
 /// Only runs the preprocessor: actual lexing/parsing of the preprocessed
 /// text into IR is done by [SvParser] (see `sv_parser.dart`), which reads
-/// [ParsedModule.sourceText] directly. An earlier ANTLR-generated grammar
-/// used to run here too, but it never produced usable output and its parse
-/// errors were pure noise; see the `lib/generated/grammar` sources if that
-/// grammar is ever revived for something else.
+/// [ParsedModule.sourceText] directly.
 class Frontend {
   final DiagnosticCollector diagnostics;
   final List<IncludePath> includePaths;
