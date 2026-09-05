@@ -245,6 +245,16 @@ All bundled fixtures pass equivalence across parameterized widths, generate
 blocks, enums/FSMs, inlined functions, `casez` wildcards, multi-dimensional
 arrays, and module hierarchy.
 
+## References
+
+- [ROHD](https://github.com/intel/rohd) — the target framework sv2rohd generates for.
+- [ROHD-HCL](https://github.com/intel/rohd-hcl) — reusable ROHD hardware components.
+- [LogikBench](https://github.com/zeroasiccorp/logikbench) — a large hybrid
+  benchmark suite of human-authored and AI-generated Verilog RTL circuits (250
+  circuits, >1M LOC, across many circuit types and sizes). sv2rohd uses it as a
+  corpus to broaden conversion coverage and stress the frontend beyond the
+  bundled fixtures.
+
 ## AI assistance
 
 Parts of this codebase were generated with LLM assistance and reviewed by the
