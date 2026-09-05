@@ -459,6 +459,41 @@ void main() {
       expect(output, contains('_resize(in_, nextState.width)'));
     });
 
+    test('concatenation-LHS assignment is split into per-part slices', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/add.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/add.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // `{cout, sum} = ...` must not assign to a read-only swizzle.
+      expect(output, isNot(contains('.swizzle() <=')));
+      // Each part is driven from the matching bit range (LSB up).
+      expect(output, contains('sum <= _cat0.getRange(0, sum.width)'));
+      expect(output,
+          contains('cout <= _cat0.getRange(sum.width, sum.width + cout.width)'));
+    });
+
+    test('parameter default depending on another parameter is resolved', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/mul.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/mul.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // `parameter OW = 2*DW` can't be a Dart default; it's nullable + resolved.
+      expect(output, contains('{int dw = 16, int? ow}'));
+      expect(output, contains('ow ??= 2 * dw;'));
+      // A widening multiply sizes operands to the product width first.
+      expect(output, contains('_resize(a.slice(dw - 1, 0),'));
+    });
+
     test('dynamic-bound part-select is a clean diagnostic, not broken code',
         () {
       final converter = SV2ROHD();

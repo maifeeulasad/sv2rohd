@@ -24,6 +24,7 @@ void main() {
     // dynamic_index.sv is intentionally un-inlinable (a GEN0025 error), and
     // unconnected_port.sv deliberately floats an input, so both are excluded.
     const fixtures = <String>[
+      'add',
       'adder',
       'alu',
       'arbiter',
@@ -38,6 +39,8 @@ void main() {
       'hierarchy',
       'keyword_names',
       'matrix_regs',
+      'mul',
+      'muladd',
       'multiplier',
       'muxcase',
       'muxhot',

@@ -359,9 +359,19 @@ class StatementGenerator {
       switch (value.operator) {
         case BinaryOperator.add:
         case BinaryOperator.subtract:
+        case BinaryOperator.multiply:
+          // Add/subtract/multiply are context-determined: sizing the operands
+          // to the target width preserves the (low) result bits. This matters
+          // for a widening multiply (`out[2*DW-1:0] = a[DW-1:0] * b[DW-1:0]`),
+          // where ROHD would otherwise compute a DW-wide product and lose the
+          // high half.
           final l = _fitted(value.left, targetRef, targetWidth);
           final r = _fitted(value.right, targetRef, targetWidth);
-          final op = value.operator == BinaryOperator.add ? '+' : '-';
+          final op = switch (value.operator) {
+            BinaryOperator.add => '+',
+            BinaryOperator.subtract => '-',
+            _ => '*',
+          };
           return '($l $op $r)';
         case BinaryOperator.and:
         case BinaryOperator.or:

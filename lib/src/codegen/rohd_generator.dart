@@ -239,6 +239,19 @@ class RohdGenerator {
           if (item is SignalDeclaration) item
       ];
 
+  /// True when [expr] is a compile-time constant usable as a Dart named-
+  /// parameter default — i.e. it references no other parameter/identifier.
+  bool _isConstDefault(IrExpression expr) =>
+      !_containsIdentifier(expr);
+
+  bool _containsIdentifier(IrNode node) {
+    if (node is IdentifierExpression) return true;
+    for (final child in node.children) {
+      if (_containsIdentifier(child)) return true;
+    }
+    return false;
+  }
+
   void _generateConstructor(
     ModuleDeclaration module,
     List<SignalDeclaration> topSignals,
@@ -252,12 +265,25 @@ class RohdGenerator {
       final type = port.direction == PortDirection.inout ? 'LogicNet' : 'Logic';
       params.add('$type ${name}Source');
     }
-    final namedParams = <String>[
-      for (final param in module.parameters)
-        if (!param.isLocal)
-          'int ${namingStrategy.toCamelCase(param.name)} = '
-              '${param.defaultValue != null ? _exprGen.generateInt(param.defaultValue!) : '0'}',
-    ];
+    // A Dart named-parameter default must be a compile-time constant and
+    // cannot reference another parameter, so a parameter whose default depends
+    // on other parameters (e.g. `OW = 2 * DW`) is emitted as nullable and
+    // resolved at the top of the constructor body (in declaration order).
+    final namedParams = <String>[];
+    final paramDefaults = <String>[]; // `name ??= expr;` for dependent defaults
+    for (final param in module.parameters) {
+      if (param.isLocal) continue;
+      final name = namingStrategy.toCamelCase(param.name);
+      final def = param.defaultValue;
+      if (def == null) {
+        namedParams.add('int $name = 0');
+      } else if (_isConstDefault(def)) {
+        namedParams.add('int $name = ${_exprGen.generateInt(def)}');
+      } else {
+        namedParams.add('int? $name');
+        paramDefaults.add('$name ??= ${_exprGen.generateInt(def)};');
+      }
+    }
     if (namedParams.isNotEmpty) {
       params.add('{${namedParams.join(', ')}}');
     }
@@ -265,6 +291,14 @@ class RohdGenerator {
     _writeLine(
         "$className(${params.join(', ')}) : super(name: '${module.name}') {");
     _indent();
+
+    if (paramDefaults.isNotEmpty) {
+      _writeLine('// Parameter defaults that depend on other parameters');
+      for (final line in paramDefaults) {
+        _writeLine(line);
+      }
+      _writeLine();
+    }
 
     if (module.ports.isNotEmpty) {
       _writeLine('// Ports');
