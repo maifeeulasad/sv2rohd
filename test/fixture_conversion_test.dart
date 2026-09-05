@@ -512,6 +512,27 @@ void main() {
       );
     });
 
+    test('packed constant localparam and signed widening (CORDIC cos)', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/cos.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/cos.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // The packed `localparam ATAN = {...}` must evaluate, not collapse to 0.
+      expect(output, isNot(contains('final atan = 0;')));
+      // No "unsupported elaboration-time expression" for the concatenation.
+      expect(
+        converter.diagnostics.warnings.map((d) => d.code),
+        isNot(contains('GEN0003')),
+      );
+      // `assign zw[0] = z;` widens a signed input, so it sign-extends.
+      expect(output, contains('_resizeSigned(z, zw[0].width)'));
+    });
+
     test('dynamic-bound part-select is a clean diagnostic, not broken code',
         () {
       final converter = SV2ROHD();
