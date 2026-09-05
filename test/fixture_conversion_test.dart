@@ -337,5 +337,122 @@ void main() {
       expect(output, contains('sum <= ha2.s;'));
       expect(output, contains('cout <= (c1 | c2);'));
     });
+
+    test('bit-select LHS lowers to whole-signal withSet (issue #31)', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/arbiter.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/arbiter.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // A bit-select LHS `grant[i] = 1'b1` must NOT become `grant[i] < …`
+      // (ROHD rejects a bit-select as an unassignable target); it is lowered
+      // to a whole-signal `withSet` that replaces bit `i`.
+      expect(output, contains('grant < grant.withSet(i, Const(1, width: 1))'));
+      expect(output, isNot(contains('grant[i] <')));
+      // The procedural for-loop index is treated as an elaboration-time int,
+      // so no spurious "not a parameter or genvar" warning fires.
+      expect(
+        converter.diagnostics.warnings.map((d) => d.code),
+        isNot(contains('GEN0002')),
+      );
+    });
+
+    test('part-select LHS lowers to withSet with the right width (issue #31)',
+        () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/partsel_write.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/partsel_write.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // `y[7:4] = 4'hA` -> withSet at the lsb with a width-4 update.
+      expect(
+        output,
+        contains('y < y.withSet(4, Const(10, width: (7) - (4) + 1))'),
+      );
+      // `y[0] = 1'b1` -> withSet at bit 0 with a width-1 update.
+      expect(output, contains('y < y.withSet(0, Const(1, width: 1))'));
+    });
+
+    test('\$clog2 emits a self-contained log2Ceil helper', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/onehot.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/onehot.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // ROHD has no top-level log2Ceil, so the file defines its own.
+      expect(
+        output,
+        contains('int log2Ceil(int x) => x <= 1 ? 0 : (x - 1).bitLength;'),
+      );
+      expect(output, contains('log2Ceil(dw)'));
+      // A part-select of the int loop variable is integer bit math, not slice.
+      expect(output, isNot(contains('i.slice(')));
+    });
+
+    test('module name colliding with a ROHD type is escaped', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/pipeline.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/pipeline.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // `Pipeline` clashes with ROHD's exported `Pipeline`, so the Dart class
+      // is escaped; the SystemVerilog module name is preserved.
+      expect(output, contains('class Pipeline_ extends Module'));
+      expect(output, contains("super(name: 'pipeline')"));
+    });
+
+    test('indexed part-select and precedence are lowered correctly', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/muxhot.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/muxhot.sv',
+        outputPath: outputFile.path,
+      );
+
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      // `in[((i+1)*DW-1) -: DW]` -> descending slice with `(i + 1)` preserved.
+      expect(
+        output,
+        contains(
+            'in_.slice((i + 1) * dw - 1, (i + 1) * dw - 1 - (dw - 1))'),
+      );
+    });
+
+    test('dynamic-bound part-select is a clean diagnostic, not broken code',
+        () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/mux.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/mux.sv',
+        outputPath: outputFile.path,
+      );
+
+      // `data[sel*DW +: DW]` has runtime bounds; ROHD slice needs constants.
+      expect(converter.hasErrors, isTrue);
+      expect(
+        converter.diagnostics.errors.map((d) => d.code),
+        contains('GEN0027'),
+      );
+      // No invalid `.slice(<Logic>)` is emitted.
+      expect(output, isNot(contains('.slice(sel')));
+    });
   });
 }

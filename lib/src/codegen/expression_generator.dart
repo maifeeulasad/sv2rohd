@@ -63,6 +63,11 @@ class ExpressionGenerator {
       return expr.functionName == r'$clog2' &&
           expr.arguments.every(isIntDomain);
     }
+    // A bit/part-select of an elaboration-time int stays in the int domain.
+    if (expr is PartSelectExpression) return isIntDomain(expr.base);
+    if (expr is IndexedPartSelectExpression) {
+      return isIntDomain(expr.base) && isIntDomain(expr.index);
+    }
     return false;
   }
 
@@ -97,10 +102,35 @@ class ExpressionGenerator {
           '.replicate(${generateInt(expr.count)})';
     }
     if (expr is PartSelectExpression) {
+      // A part-select of an elaboration-time int (e.g. `i[$clog2(N)-1:0]` on a
+      // loop variable) is integer bit math, not a `Logic.slice`.
+      if (isIntDomain(expr.base)) {
+        final base = _postfixOperand(generateInt(expr.base));
+        final lsb = generateInt(expr.lsb);
+        final width = '(${generateInt(expr.msb)}) - ($lsb) + 1';
+        return '(($base >> $lsb) & ((1 << ($width)) - 1))';
+      }
+      // A part-select whose bounds depend on a runtime signal (e.g. an
+      // indexed part-select `data[sel*W +: W]` with a Logic `sel`) has no
+      // faithful `Logic.slice` lowering — `slice` needs compile-time bounds.
+      // Emit a diagnostic rather than `slice(<Logic>)`, which does not compile.
+      if (!isIntDomain(expr.msb) || !isIntDomain(expr.lsb)) {
+        diagnostics?.error(
+          'part-select with runtime (non-constant) bounds is not supported; '
+          'ROHD slice bounds must be compile-time constants',
+          code: 'GEN0027',
+        );
+        return 'Const(0)';
+      }
       final base = _postfixOperand(generate(expr.base));
       return '$base.slice(${generateInt(expr.msb)}, ${generateInt(expr.lsb)})';
     }
     if (expr is IndexedPartSelectExpression) {
+      // A bit-select of an elaboration-time int is integer bit math.
+      if (isIntDomain(expr.base) && isIntDomain(expr.index)) {
+        final base = _postfixOperand(generateInt(expr.base));
+        return '(($base >> ${generateInt(expr.index)}) & 1)';
+      }
       return _generateIndex(expr);
     }
     if (expr is FunctionCallExpression) {
@@ -178,8 +208,6 @@ class ExpressionGenerator {
       };
     }
     if (expr is BinaryExpression) {
-      final left = generateInt(expr.left);
-      final right = generateInt(expr.right);
       final op = switch (expr.operator) {
         BinaryOperator.add => '+',
         BinaryOperator.subtract => '-',
@@ -203,6 +231,13 @@ class ExpressionGenerator {
         BinaryOperator.logicalOr => '||',
         _ => '+',
       };
+      // Parenthesize operands only where operator precedence requires it, so
+      // `(i+1)*DW` keeps its parentheses while `width + 1` stays flat. All
+      // these operators are left-associative: the right operand also needs
+      // parentheses at equal precedence (e.g. `a - (b - c)`).
+      final prec = _intPrecedence(expr.operator);
+      final left = _intOperand(expr.left, prec, isRight: false);
+      final right = _intOperand(expr.right, prec, isRight: true);
       return '$left $op $right';
     }
     if (expr is ConditionalExpression) {
@@ -214,11 +249,69 @@ class ExpressionGenerator {
       final args = expr.arguments.map(generateInt).join(', ');
       return 'log2Ceil($args)';
     }
+    // Bit/part-selects of an elaboration-time int are integer bit math.
+    if (expr is PartSelectExpression && isIntDomain(expr.base)) {
+      final base = _postfixOperand(generateInt(expr.base));
+      final lsb = generateInt(expr.lsb);
+      final width = '(${generateInt(expr.msb)}) - ($lsb) + 1';
+      return '(($base >> $lsb) & ((1 << ($width)) - 1))';
+    }
+    if (expr is IndexedPartSelectExpression &&
+        isIntDomain(expr.base) &&
+        isIntDomain(expr.index)) {
+      final base = _postfixOperand(generateInt(expr.base));
+      return '(($base >> ${generateInt(expr.index)}) & 1)';
+    }
     diagnostics?.warning(
       'unsupported elaboration-time expression ${expr.nodeType}',
       code: 'GEN0003',
     );
     return '0';
+  }
+
+  /// Relative precedence of an int-domain binary operator (higher binds
+  /// tighter), used to decide when a rendered operand needs parentheses.
+  static int _intPrecedence(BinaryOperator op) => switch (op) {
+        BinaryOperator.logicalOr => 1,
+        BinaryOperator.logicalAnd => 2,
+        BinaryOperator.or => 3,
+        BinaryOperator.xor => 4,
+        BinaryOperator.and => 5,
+        BinaryOperator.equal ||
+        BinaryOperator.caseEqual ||
+        BinaryOperator.notEqual ||
+        BinaryOperator.caseNotEqual =>
+          6,
+        BinaryOperator.lessThan ||
+        BinaryOperator.lessThanOrEqual ||
+        BinaryOperator.greaterThan ||
+        BinaryOperator.greaterThanOrEqual =>
+          7,
+        BinaryOperator.shiftLeft ||
+        BinaryOperator.arithmeticShiftLeft ||
+        BinaryOperator.shiftRight ||
+        BinaryOperator.arithmeticShiftRight =>
+          8,
+        BinaryOperator.add || BinaryOperator.subtract => 9,
+        BinaryOperator.multiply ||
+        BinaryOperator.divide ||
+        BinaryOperator.modulo =>
+          10,
+        _ => 0,
+      };
+
+  /// Renders [expr] as an operand of a binary op at [parentPrec], adding
+  /// parentheses when the child binds looser than the parent (or equally, for
+  /// the right operand of a left-associative operator).
+  String _intOperand(IrExpression expr, int parentPrec, {required bool isRight}) {
+    final text = generateInt(expr);
+    if (expr is BinaryExpression) {
+      final childPrec = _intPrecedence(expr.operator);
+      if (childPrec < parentPrec || (isRight && childPrec == parentPrec)) {
+        return '($text)';
+      }
+    }
+    return text;
   }
 
   String _literalValueText(LiteralExpression expr) {

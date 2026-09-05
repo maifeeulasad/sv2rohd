@@ -75,24 +75,59 @@ class NamingStrategy {
     'yield',
   };
 
+  /// Public type names exported by `package:rohd/rohd.dart`. A generated module
+  /// class colliding with one of these produces a Dart name clash ("X is
+  /// imported from both …"), so the class name is escaped with a trailing
+  /// underscore. The SystemVerilog module name is preserved separately (via
+  /// `super(name: …)`), so the escape is Dart-only and does not affect the
+  /// generated SystemVerilog.
+  static const Set<String> _rohdReservedTypes = {
+    'Add', 'And2Gate', 'AndUnary', 'ARShift', 'BusSubset', 'Case', 'CaseItem',
+    'CaseZ', 'Combinational', 'Conditional', 'ConditionalAssign',
+    'ConditionalGroup', 'Config', 'Const', 'Divide', 'Dumper', 'Else',
+    'ElseIf', 'Equals', 'ExternalModule', 'FF', 'FiniteStateMachine',
+    'FlipFlop', 'GreaterThan', 'GreaterThanOrEqual', 'If', 'IfBlock', 'Iff',
+    'IndexGate', 'Interface', 'LessThan', 'LessThanOrEqual', 'Logic',
+    'LogicArray', 'LogicNet', 'LogicStructure', 'LogicValue', 'LShift',
+    'Module', 'Modulo', 'Multiply', 'Mux', 'Namer', 'Naming', 'NotGate',
+    'Or2Gate', 'OrUnary', 'Passthrough', 'Pipeline', 'Port', 'Power',
+    'ReadyValidPipeline', 'ReplicationOp', 'RShift', 'Sanitizer', 'Sequential',
+    'SimpleClockGenerator', 'Simulator', 'SsaLogic', 'State', 'StateMachine',
+    'Subtract', 'Swizzle', 'SystemVerilog', 'Timestamper', 'TriStateBuffer',
+    'Vector', 'WaveDumper', 'Xor2Gate', 'XorUnary',
+  };
+
+  /// Raw PascalCase conversion (no reserved-name escaping).
+  String _pascalCase(String name) => name
+      .split('_')
+      .map(
+        (p) => p.isEmpty
+            ? ''
+            : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
+      )
+      .join();
+
   /// Convert to PascalCase class name.
+  ///
+  /// A module class becomes a top-level Dart type, so a name clashing with a
+  /// Dart reserved word (`Function`) or a ROHD-exported type (`Mux`,
+  /// `Pipeline`, …) is escaped with a trailing underscore. This escape is not
+  /// applied to signal/variable names ([toCamelCase]), which live in a
+  /// different namespace and do not clash with ROHD type names.
   String toClassName(String name) {
-    final parts = name.split('_');
-    final className = parts
-        .map(
-          (p) => p.isEmpty
-              ? ''
-              : '${p[0].toUpperCase()}${p.substring(1).toLowerCase()}',
-        )
-        .join();
-    // The only PascalCase-shaped Dart reserved word is `Function`.
-    return className == 'Function' ? 'Function_' : className;
+    final className = _pascalCase(name);
+    if (className == 'Function' || _rohdReservedTypes.contains(className)) {
+      return '${className}_';
+    }
+    return className;
   }
 
   /// Convert to camelCase variable name.
   String toCamelCase(String name) {
-    final className = toClassName(name);
+    var className = _pascalCase(name);
     if (className.isEmpty) return className;
+    // Historical escape: `Function` is a built-in type name.
+    if (className == 'Function') className = 'Function_';
     final camel = '${className[0].toLowerCase()}${className.substring(1)}';
     return _dartReserved.contains(camel) ? '${camel}_' : camel;
   }

@@ -67,14 +67,32 @@ class RohdGenerator {
       _knownModules[module.name] = module;
     }
 
-    _writeLine("import 'package:rohd/rohd.dart';");
-    _writeLine();
     for (var i = 0; i < modules.length; i++) {
       if (i > 0) _writeLine();
       _generateModule(modules[i]);
     }
-    return _buffer.toString();
+    final body = _buffer.toString();
+
+    // Assemble the file: import, an optional self-contained `log2Ceil` helper
+    // (ROHD has no top-level equivalent — only `LogicValue.clog2()` — so
+    // `$clog2` in an elaboration-time/width context needs one supplied here),
+    // then the module bodies.
+    final header = StringBuffer()
+      ..writeln("import 'package:rohd/rohd.dart';")
+      ..writeln();
+    if (_usesLog2Ceil(body)) {
+      header
+        ..writeln('/// Ceil of log base 2 — the number of bits needed to index')
+        ..writeln('/// [x] values (the elaboration-time form of `\$clog2`).')
+        ..writeln('int log2Ceil(int x) => x <= 1 ? 0 : (x - 1).bitLength;')
+        ..writeln();
+    }
+    return header.toString() + body;
   }
+
+  /// True when the generated [body] calls the `log2Ceil` helper (emitted for
+  /// `$clog2` used in an int/width context).
+  bool _usesLog2Ceil(String body) => RegExp(r'\blog2Ceil\(').hasMatch(body);
 
   // ── Module ───────────────────────────────────────────────────────
 
@@ -176,7 +194,26 @@ class RohdGenerator {
         for (final caseItem in item.items) {
           _collectContext(caseItem.body.items);
         }
+      } else if (item is AlwaysBlock) {
+        _collectProceduralLoopVars(item.body);
       }
+    }
+  }
+
+  /// Registers procedural `for`-loop index variables (inside `always` blocks)
+  /// in the int-domain. Such loops are elaborated to Dart `for (var i = …)`
+  /// loops, so the index is a compile-time `int`, not a hardware signal — the
+  /// same treatment genvars and generate-for loops already receive.
+  void _collectProceduralLoopVars(IrNode node) {
+    if (node is ForLoopStatement) {
+      final init = node.initialization;
+      if (init is AssignmentStatement && init.target is IdentifierExpression) {
+        _wa.intDomain.add(namingStrategy
+            .toCamelCase((init.target as IdentifierExpression).identifier));
+      }
+    }
+    for (final child in node.children) {
+      _collectProceduralLoopVars(child);
     }
   }
 

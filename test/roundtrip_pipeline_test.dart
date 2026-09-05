@@ -30,6 +30,19 @@ void main() {
       const _Fixture('fsm', 'fixtures/sv_samples/fsm.sv'),
       const _Fixture('functions', 'fixtures/sv_samples/functions.sv'),
       const _Fixture('signed_cmp', 'fixtures/sv_samples/signed_cmp.sv'),
+      const _Fixture('arbiter', 'fixtures/sv_samples/arbiter.sv'),
+      const _Fixture('bin2prio', 'fixtures/sv_samples/bin2prio.sv'),
+      const _Fixture('partsel_write', 'fixtures/sv_samples/partsel_write.sv'),
+      const _Fixture('dffasync', 'fixtures/sv_samples/dffasync.sv'),
+      const _Fixture('dffsync', 'fixtures/sv_samples/dffsync.sv'),
+      const _Fixture('muxcase', 'fixtures/sv_samples/muxcase.sv'),
+      const _Fixture('muxhot', 'fixtures/sv_samples/muxhot.sv'),
+      const _Fixture('muxpri', 'fixtures/sv_samples/muxpri.sv'),
+      const _Fixture('onehot', 'fixtures/sv_samples/onehot.sv'),
+      const _Fixture('pipeline', 'fixtures/sv_samples/pipeline.sv'),
+      const _Fixture('shiftreg', 'fixtures/sv_samples/shiftreg.sv'),
+      const _Fixture('tff', 'fixtures/sv_samples/tff.sv'),
+      const _Fixture('tmr', 'fixtures/sv_samples/tmr.sv'),
     ];
 
     for (final fixture in fixtures) {
@@ -115,9 +128,15 @@ String _buildDriver(
   final inputs =
       module.ports.where((p) => p.direction != PortDirection.output).toList();
 
+  // The driver instantiates the module with its default parameters, so port
+  // source widths must be evaluated with those same defaults (not a hardcoded
+  // guess) — otherwise a parameterized port like `[N-1:0]` with `N=16` gets a
+  // mismatched source width.
+  final params = _paramDefaults(module);
+
   final inputDecls = inputs.map((port) {
     final name = namingStrategy.toCamelCase(port.name);
-    final width = _widthFromVector(port.width);
+    final width = _widthFromVector(port.width, params);
     return "  final $name = Logic(name: '$name', width: $width);";
   }).join('\n');
 
@@ -135,15 +154,73 @@ $inputDecls
 ''';
 }
 
-int _widthFromVector(VectorWidth? width) {
+/// Evaluates each module parameter's default value into an int environment
+/// keyed by the SystemVerilog parameter name, so parameterized port widths can
+/// be computed the same way the generated module computes them.
+Map<String, int> _paramDefaults(ModuleDeclaration module) {
+  final env = <String, int>{};
+  for (final param in module.parameters) {
+    final value = param.defaultValue;
+    if (value == null) continue;
+    final evaluated = _evalInt(value, env);
+    if (evaluated != null) env[param.name] = evaluated;
+  }
+  return env;
+}
+
+int _widthFromVector(VectorWidth? width, Map<String, int> params) {
   if (width == null) return 1;
-  if (width.msb is LiteralExpression && width.lsb is LiteralExpression) {
-    final msb = (width.msb as LiteralExpression).value as int;
-    final lsb = (width.lsb as LiteralExpression).value as int;
+  final msb = width.msb == null ? null : _evalInt(width.msb!, params);
+  final lsb = width.lsb == null ? null : _evalInt(width.lsb!, params);
+  if (msb != null && lsb != null) {
     return (msb - lsb).abs() + 1;
   }
-  // For parameterized widths like WIDTH-1:0, default to 8
+  // Parameterized width we couldn't evaluate; fall back to a small default.
   return 8;
+}
+
+/// Minimal constant-expression evaluator for elaboration-time width math
+/// (literals, parameters, and the operators SystemVerilog widths use).
+int? _evalInt(IrExpression expr, Map<String, int> env) {
+  if (expr is LiteralExpression) {
+    final value = expr.value;
+    return value is int ? value : null;
+  }
+  if (expr is IdentifierExpression) {
+    return env[expr.identifier];
+  }
+  if (expr is UnaryExpression) {
+    final operand = _evalInt(expr.operand, env);
+    if (operand == null) return null;
+    return switch (expr.operator) {
+      UnaryOperator.plus => operand,
+      UnaryOperator.minus => -operand,
+      UnaryOperator.bitwiseNot => ~operand,
+      _ => null,
+    };
+  }
+  if (expr is BinaryExpression) {
+    final l = _evalInt(expr.left, env);
+    final r = _evalInt(expr.right, env);
+    if (l == null || r == null) return null;
+    return switch (expr.operator) {
+      BinaryOperator.add => l + r,
+      BinaryOperator.subtract => l - r,
+      BinaryOperator.multiply => l * r,
+      BinaryOperator.divide => r == 0 ? null : l ~/ r,
+      BinaryOperator.modulo => r == 0 ? null : l % r,
+      BinaryOperator.shiftLeft => l << r,
+      BinaryOperator.shiftRight => l >> r,
+      _ => null,
+    };
+  }
+  if (expr is FunctionCallExpression && expr.functionName == r'$clog2') {
+    if (expr.arguments.isEmpty) return null;
+    final arg = _evalInt(expr.arguments.first, env);
+    if (arg == null || arg <= 1) return arg == null ? null : 0;
+    return (arg - 1).bitLength;
+  }
+  return null;
 }
 
 void _assertSimilarity(ModuleDeclaration module, String sv) {

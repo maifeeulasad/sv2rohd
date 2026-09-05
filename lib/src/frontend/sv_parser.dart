@@ -1717,6 +1717,13 @@ class SvParser {
           msb: first,
           lsb: lsb,
         );
+      } else if (_check('+:') || _check('-:')) {
+        final descending = _check('-:');
+        _advance();
+        final width = _parseExpression();
+        _expect(']');
+        expr = _indexedPartSelect(expr, first, width,
+            descending: descending, at: selStart);
       } else {
         _expect(']');
         expr = IndexedPartSelectExpression(
@@ -1727,6 +1734,53 @@ class SvParser {
       }
     }
     return expr;
+  }
+
+  /// Builds an explicit `msb:lsb` [PartSelectExpression] from an indexed
+  /// part-select `base[start +: width]` (ascending, `descending == false`) or
+  /// `base[start -: width]` (descending). Ascending selects
+  /// `[start+width-1 : start]`; descending selects `[start : start-width+1]`.
+  IrExpression _indexedPartSelect(
+    IrExpression base,
+    IrExpression start,
+    IrExpression width, {
+    required bool descending,
+    required SvToken at,
+  }) {
+    final widthMinusOne = BinaryExpression(
+      location: _loc(at),
+      left: width,
+      right: LiteralExpression(
+        location: _loc(at),
+        kind: LiteralKind.integer,
+        value: 1,
+      ),
+      operator: BinaryOperator.subtract,
+    );
+    if (descending) {
+      return PartSelectExpression(
+        location: _loc(at),
+        base: base,
+        msb: start,
+        lsb: BinaryExpression(
+          location: _loc(at),
+          left: start,
+          right: widthMinusOne,
+          operator: BinaryOperator.subtract,
+        ),
+      );
+    }
+    return PartSelectExpression(
+      location: _loc(at),
+      base: base,
+      msb: BinaryExpression(
+        location: _loc(at),
+        left: start,
+        right: widthMinusOne,
+        operator: BinaryOperator.add,
+      ),
+      lsb: start,
+    );
   }
 
   IrStatement _parseSimpleAssignmentStatement() {
@@ -2101,31 +2155,13 @@ class SvParser {
             msb: first,
             lsb: lsb,
           );
-        } else if (_match('+:') || _match('-:')) {
-          // Indexed part select base[start +: width]; approximate with a
-          // plain part select using the width expression only.
+        } else if (_check('+:') || _check('-:')) {
+          final descending = _check('-:');
+          _advance();
           final width = _parseExpression();
           _expect(']');
-          expr = PartSelectExpression(
-            location: _loc(start),
-            base: expr,
-            msb: BinaryExpression(
-              location: _loc(start),
-              left: BinaryExpression(
-                location: _loc(start),
-                left: first,
-                right: width,
-                operator: BinaryOperator.add,
-              ),
-              right: LiteralExpression(
-                location: _loc(start),
-                kind: LiteralKind.integer,
-                value: 1,
-              ),
-              operator: BinaryOperator.subtract,
-            ),
-            lsb: first,
-          );
+          expr = _indexedPartSelect(expr, first, width,
+              descending: descending, at: start);
         } else {
           _expect(']');
           expr = IndexedPartSelectExpression(

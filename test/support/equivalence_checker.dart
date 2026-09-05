@@ -408,6 +408,12 @@ ${decls.join('\n')}
         _ => null,
       };
     }
+    if (e is FunctionCallExpression && e.functionName == r'$clog2') {
+      if (e.arguments.isEmpty) return null;
+      final arg = _evalInt(e.arguments.first, env);
+      if (arg == null) return null;
+      return arg <= 1 ? 0 : (arg - 1).bitLength;
+    }
     return null;
   }
 

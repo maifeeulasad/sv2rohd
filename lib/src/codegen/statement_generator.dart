@@ -51,21 +51,28 @@ class StatementGenerator {
     }
 
     if (stmt is AssignmentStatement) {
-      final target = exprGen.generate(stmt.target);
-      final value = assignmentValue(stmt.target, stmt.value);
       if (stmt.type == AssignmentType.continuous) {
+        final target = exprGen.generate(stmt.target);
         final logicValue = _requireLogicValue(stmt.target, stmt.value);
         return ['$target <= $logicValue$suffix'];
       }
+      final select = _selectAssignmentLines(stmt.target, stmt.value, suffix);
+      if (select != null) return select;
+      final target = exprGen.generate(stmt.target);
+      final value = assignmentValue(stmt.target, stmt.value);
       return ['$target < $value$suffix'];
     }
 
     if (stmt is BlockingAssignmentStatement) {
+      final select = _selectAssignmentLines(stmt.target, stmt.value, suffix);
+      if (select != null) return select;
       final target = exprGen.generate(stmt.target);
       return ['$target < ${assignmentValue(stmt.target, stmt.value)}$suffix'];
     }
 
     if (stmt is NonBlockingAssignmentStatement) {
+      final select = _selectAssignmentLines(stmt.target, stmt.value, suffix);
+      if (select != null) return select;
       final target = exprGen.generate(stmt.target);
       return ['$target < ${assignmentValue(stmt.target, stmt.value)}$suffix'];
     }
@@ -163,6 +170,97 @@ class StatementGenerator {
       return exprGen.generateLogic(value, widthContext: targetRef);
     }
     return assignmentValue(target, value);
+  }
+
+  /// Lowers a procedural assignment whose left-hand side is a bit- or
+  /// part-select (`sig[i] = …`, `sig[msb:lsb] = …`) into a whole-signal
+  /// conditional using ROHD's `withSet`, which returns a copy of the signal
+  /// with the selected bits replaced.
+  ///
+  /// ROHD marks the result of a bit/part-select as read-only, so the direct
+  /// lowering `sig[i] < value` throws "has been marked as unassignable" at
+  /// construction (issue #31). `sig < sig.withSet(i, value)` instead reads the
+  /// current (staged) value of `sig`, replaces the selected bits, and assigns
+  /// the whole signal — matching SystemVerilog blocking (`always_comb`) and
+  /// non-blocking (`always_ff`) bit-write semantics, where the unselected bits
+  /// keep their prior value.
+  ///
+  /// Returns null when [target] is not a bit/part-select on an assignable
+  /// Logic vector (the caller then uses the normal lowering).
+  List<String>? _selectAssignmentLines(
+    IrExpression target,
+    IrExpression value,
+    String suffix,
+  ) {
+    if (target is IndexedPartSelectExpression && _isLogicBitSelect(target)) {
+      final index = target.index;
+      if (!exprGen.isIntDomain(index)) {
+        diagnostics?.error(
+          'assignment to a bit-select with a runtime (non-constant) index is '
+          'not supported; ROHD needs a compile-time bit position for withSet',
+          code: 'GEN0028',
+        );
+        return ['// TODO: dynamic bit-select assignment$suffix'];
+      }
+      final base = _postfix(exprGen.generate(target.base));
+      final idx = exprGen.generateInt(index);
+      final update = _sizedUpdate(value, '1');
+      return ['$base < $base.withSet($idx, $update)$suffix'];
+    }
+
+    if (target is PartSelectExpression) {
+      final msb = target.msb;
+      final lsb = target.lsb;
+      if (!exprGen.isIntDomain(msb) || !exprGen.isIntDomain(lsb)) {
+        diagnostics?.error(
+          'assignment to a part-select with runtime (non-constant) bounds is '
+          'not supported; ROHD needs compile-time bounds for withSet',
+          code: 'GEN0028',
+        );
+        return ['// TODO: dynamic part-select assignment$suffix'];
+      }
+      final base = _postfix(exprGen.generate(target.base));
+      final lsbStr = exprGen.generateInt(lsb);
+      final widthExpr = '(${exprGen.generateInt(msb)}) - ($lsbStr) + 1';
+      final update = _sizedUpdate(value, widthExpr);
+      return ['$base < $base.withSet($lsbStr, $update)$suffix'];
+    }
+
+    return null;
+  }
+
+  /// True when [expr] selects a single bit of a Logic vector (as opposed to
+  /// indexing an unpacked-array element, which yields an assignable element
+  /// Logic and needs no `withSet`). A select is a Logic bit-select when the
+  /// index-chain depth exceeds the base signal's unpacked-array dimensions.
+  bool _isLogicBitSelect(IndexedPartSelectExpression expr) {
+    var depth = 0;
+    IrExpression cursor = expr;
+    while (cursor is IndexedPartSelectExpression) {
+      depth++;
+      cursor = cursor.base;
+    }
+    if (cursor is! IdentifierExpression) {
+      // Bit-select on a non-identifier base (e.g. a concatenation); treat as a
+      // Logic bit-select.
+      return true;
+    }
+    final id = cursor.identifier;
+    final dims = exprGen.arraySignals.contains(id)
+        ? (widthAnalyzer?.arrayDimensions[id] ?? 1)
+        : 0;
+    return depth > dims;
+  }
+
+  /// Renders [value] as a ROHD `Logic` of the given Dart [widthExpr] (an int
+  /// expression), for use as the `withSet` update operand. Integer-domain
+  /// values and literals become width-sized `Const`s; Logic values are emitted
+  /// as-is (their width is expected to match the selected range).
+  String _sizedUpdate(IrExpression value, String widthExpr) {
+    if (exprGen.isIntDomain(value)) {
+      return 'Const(${exprGen.generateInt(value)}, width: $widthExpr)';
+    }
+    return exprGen.generate(value);
   }
 
   String _fitted(IrExpression value, String targetRef, LinearExpr targetWidth) {
