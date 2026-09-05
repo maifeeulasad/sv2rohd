@@ -149,9 +149,12 @@ class ExpressionGenerator {
   /// defaulting each constant to a single bit.
   String generateConditional(ConditionalExpression expr,
       {String? widthContext}) {
+    // Both mux arms must share the target width, so a sized literal arm (e.g.
+    // `1'b1`) is widened to the context rather than keeping its own width.
+    final force = widthContext != null;
     return 'mux(${generateLogic(expr.condition)}, '
-        '${generateLogic(expr.trueExpr, widthContext: widthContext)}, '
-        '${generateLogic(expr.falseExpr, widthContext: widthContext)})';
+        '${generateLogic(expr.trueExpr, widthContext: widthContext, forceWidthContext: force)}, '
+        '${generateLogic(expr.falseExpr, widthContext: widthContext, forceWidthContext: force)})';
   }
 
   /// Generates an expression that must be a ROHD `Logic` value; int-domain
@@ -159,11 +162,18 @@ class ExpressionGenerator {
   ///
   /// [widthContext] optionally provides a Dart expression whose `.width`
   /// determines the constant's width when the literal itself is unsized.
-  String generateLogic(IrExpression expr, {String? widthContext}) {
+  ///
+  /// When [forceWidthContext] is set, [widthContext] takes priority over a
+  /// sized literal's own width — used for `mux` branches, where both arms must
+  /// share the target width (SystemVerilog sizes both `?:` operands to the
+  /// assignment context).
+  String generateLogic(IrExpression expr,
+      {String? widthContext, bool forceWidthContext = false}) {
     if (expr is LiteralExpression &&
         (expr.kind == LiteralKind.integer ||
             expr.kind == LiteralKind.bitVector)) {
-      return _constFor(_literalValueText(expr), expr.width, widthContext);
+      return _constFor(_literalValueText(expr), expr.width, widthContext,
+          forceWidthContext: forceWidthContext);
     }
     if (isIntDomain(expr)) {
       return _constFor(generateInt(expr), null, widthContext);
@@ -171,7 +181,11 @@ class ExpressionGenerator {
     return generate(expr);
   }
 
-  String _constFor(String valueText, int? width, String? widthContext) {
+  String _constFor(String valueText, int? width, String? widthContext,
+      {bool forceWidthContext = false}) {
+    if (forceWidthContext && widthContext != null) {
+      return 'Const($valueText, width: $widthContext.width)';
+    }
     if (width != null) {
       return 'Const($valueText, width: $width)';
     }

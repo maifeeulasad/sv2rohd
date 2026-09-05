@@ -509,16 +509,20 @@ class SvParser {
   }
 
   void _skipDataTypeForParameter() {
-    // Optional type between `parameter` and the name: `int`, `integer`,
-    // `logic [..]`, `type`, signedness, etc.
-    while (_intTypes.contains(_current.text) ||
-        _varTypes.contains(_current.text) ||
-        _current.text == 'signed' ||
-        _current.text == 'unsigned' ||
-        _current.text == 'type') {
-      _advance();
-      while (_check('[')) {
+    // Optional type/range between `parameter` and the name, in any combination:
+    // `int`, `integer`, `logic [..]`, `type`, signedness, or a bare packed
+    // range with no type keyword (`parameter [31:0] SEED`).
+    while (true) {
+      if (_intTypes.contains(_current.text) ||
+          _varTypes.contains(_current.text) ||
+          _current.text == 'signed' ||
+          _current.text == 'unsigned' ||
+          _current.text == 'type') {
+        _advance();
+      } else if (_check('[')) {
         _skipBrackets();
+      } else {
+        break;
       }
     }
   }

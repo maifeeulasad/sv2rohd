@@ -435,6 +435,25 @@ void main() {
       );
     });
 
+    test('typed/ranged parameter does not drop the port list (#35)', () {
+      final converter = SV2ROHD();
+      final outputFile = File('${tempDir.path}/parametric_fsm.dart');
+
+      final output = converter.convert(
+        'fixtures/sv_samples/parametric_fsm.sv',
+        outputPath: outputFile.path,
+      );
+
+      // `parameter [31:0] SEED = ...` must not swallow the ANSI port list.
+      expect(converter.hasErrors, isFalse, reason: converter.diagnosticSummary);
+      expect(output, contains('class ParametricFsmBenchmark extends Module'));
+      expect(output, contains("clk = addInput('clk', clkSource, width: 1)"));
+      expect(output, contains("in_ = addInput('in', in_Source, width: dw)"));
+      expect(output, contains("out = addOutput('out', width: dw)"));
+      // The ranged parameter is a normal int constructor arg.
+      expect(output, contains('int seed = 2779096485'));
+    });
+
     test('dynamic-bound part-select is a clean diagnostic, not broken code',
         () {
       final converter = SV2ROHD();
